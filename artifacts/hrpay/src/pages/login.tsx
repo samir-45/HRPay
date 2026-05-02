@@ -184,7 +184,7 @@ export default function Login() {
                 {isAdminPortal ? "Super Admin credentials" : "Demo credentials"}
               </p>
               <p>Email: <span className="text-foreground font-medium">
-                {isAdminPortal ? "superadmin@hrpay.com" : "admin@demo.com"}
+                {isAdminPortal ? "superadmin@hrpay.com" : "john@testcorp.com"}
               </span></p>
               <p>Password: <span className="text-foreground font-medium">Admin@123</span></p>
             </div>
