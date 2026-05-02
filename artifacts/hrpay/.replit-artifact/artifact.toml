@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "HRPay — HR & Payroll Platform"
+version = "1.0.0"
+id = "artifacts/hrpay"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23888
+
+[services.development]
+run = "pnpm --filter @workspace/hrpay run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hrpay", "run", "build" ]
+publicDir = "artifacts/hrpay/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23888"
+BASE_PATH = "/"
