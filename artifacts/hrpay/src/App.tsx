@@ -57,7 +57,7 @@ function ProtectedRoute({ component: Component, allowedRoles }: { component: Rea
   const { user, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
-  if (allowedRoles && !allowedRoles.includes(user.role)) return <Redirect to="/" />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) return <Redirect to="/dashboard" />;
   return (
     <AppLayout>
       <Component />
@@ -78,16 +78,16 @@ function Router() {
   const { user, isLoading } = useAuth();
   return (
     <Switch>
-      <Route path="/landing" component={Landing} />
       <Route path="/register" component={RegisterCompany} />
       <Route path="/accept-invite" component={AcceptInvite} />
       <Route path="/login">
-        {!isLoading && user ? <Redirect to={user.role === "super_admin" ? "/super-admin" : "/"} /> : <Login />}
+        {!isLoading && user ? <Redirect to={user.role === "super_admin" ? "/super-admin" : "/dashboard"} /> : <Login />}
       </Route>
 
       <Route path="/super-admin" component={SuperAdminRoute} />
 
-      <Route path="/"            component={() => <ProtectedRoute component={Dashboard} />} />
+      <Route path="/" component={Landing} />
+      <Route path="/dashboard"   component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/upgrade"     component={() => <ProtectedRoute component={Upgrade} />} />
       <Route path="/permissions" component={() => <ProtectedRoute component={Permissions} allowedRoles={["company_admin"]} />} />
       <Route path="/team"        component={() => <ProtectedRoute component={TeamManagement} allowedRoles={["company_admin", "ceoo", "super_admin", "manager"]} />} />

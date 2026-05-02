@@ -24,7 +24,7 @@ type NavItem = {
 };
 
 const baseNavigation: NavItem[] = [
-  { name: "Dashboard",         href: "/",              icon: LayoutDashboard, roles: null,                                           feature: null },
+  { name: "Dashboard",         href: "/dashboard",     icon: LayoutDashboard, roles: null,                                           feature: null },
   { name: "Permissions",       href: "/permissions",   icon: LockKeyhole,     roles: ["company_admin"],                              feature: null },
   { name: "Team",              href: "/team",          icon: UserCog,         roles: ["company_admin", "ceoo", "manager"],           feature: "team" },
   { name: "Employees",         href: "/employees",     icon: Users,           roles: null,                                           feature: "employees" },
