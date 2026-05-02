@@ -697,6 +697,11 @@ export default function Landing() {
               <Globe className="h-3 w-3" />
               Available worldwide · English
             </div>
+            <a href="/login?portal=admin"
+              className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+              <Shield className="h-3 w-3" />
+              Super Admin Portal
+            </a>
           </div>
         </div>
       </footer>
