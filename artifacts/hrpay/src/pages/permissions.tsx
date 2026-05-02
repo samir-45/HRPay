@@ -9,7 +9,7 @@ import {
 
 const LIME = "hsl(82 80% 48%)";
 
-const FEATURE_LABELS: Record<FeatureKey, { label: string; icon: React.ElementType; desc: string }> = {
+export const FEATURE_LABELS: Record<FeatureKey, { label: string; icon: React.ElementType; desc: string }> = {
   employees:    { label: "Employees",       icon: Users,         desc: "View and manage employee directory" },
   payroll:      { label: "Payroll",          icon: Calculator,    desc: "View and process payroll runs" },
   time:         { label: "Time & Attendance",icon: Clock,         desc: "Log and approve time entries" },
