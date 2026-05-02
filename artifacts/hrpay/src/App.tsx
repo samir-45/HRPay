@@ -66,12 +66,12 @@ function ProtectedRoute({ component: Component, allowedRoles }: { component: Rea
   );
 }
 
-function SuperAdminRoute() {
+function SuperAdminRoute({ page }: { page?: string }) {
   const { user, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen />;
-  if (!user) return <Redirect to="/login" />;
+  if (!user) return <Redirect to="/login?portal=admin" />;
   if (user.role !== "super_admin") return <Redirect to="/" />;
-  return <SuperAdmin />;
+  return <SuperAdmin page={page} />;
 }
 
 function Router() {
@@ -84,7 +84,11 @@ function Router() {
         {!isLoading && user && user.role !== "super_admin" ? <Redirect to="/dashboard" /> : <Login />}
       </Route>
 
-      <Route path="/super-admin" component={SuperAdminRoute} />
+      <Route path="/super-admin/companies"     component={() => <SuperAdminRoute page="companies" />} />
+      <Route path="/super-admin/subscriptions" component={() => <SuperAdminRoute page="subscriptions" />} />
+      <Route path="/super-admin/users"         component={() => <SuperAdminRoute page="users" />} />
+      <Route path="/super-admin/settings"      component={() => <SuperAdminRoute page="settings" />} />
+      <Route path="/super-admin"               component={() => <SuperAdminRoute page="overview" />} />
 
       <Route path="/" component={Landing} />
       <Route path="/dashboard"   component={() => <ProtectedRoute component={Dashboard} />} />
