@@ -1,32 +1,16 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth, apiHeaders } from "@/components/auth-context";
-import { Users, ChevronDown, ChevronRight, Mail, MapPin, Briefcase } from "lucide-react";
+import {
+  useListEmployees,
+  useListDepartments,
+  getListEmployeesQueryKey,
+  getListDepartmentsQueryKey,
+  type Employee,
+  type Department,
+} from "@workspace/api-client-react";
+import { Users, ChevronDown, ChevronRight, Mail, Briefcase } from "lucide-react";
 
-const API = "/api";
 const LIME = "hsl(82 80% 48%)";
 
-interface Employee {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  position: string;
-  status: string;
-  employmentType: string;
-  departmentName?: string;
-  startDate?: string;
-  avatarUrl?: string;
-}
-
-interface Department {
-  id: number;
-  name: string;
-  description?: string;
-  managerName?: string;
-  employeeCount?: number;
-  budget?: string;
-}
 
 const DEPT_COLORS = [
   "hsl(82 80% 48%)",
@@ -103,21 +87,19 @@ function DeptBlock({ dept, employees, color }: { dept: Department; employees: Em
 }
 
 export default function OrgChart() {
-  const { token } = useAuth();
   const [view, setView] = useState<"dept" | "list">("dept");
   const [search, setSearch] = useState("");
 
-  const employees = useQuery<Employee[]>({
-    queryKey: ["employees"],
-    queryFn: () => fetch(`${API}/employees`, { headers: apiHeaders(token) }).then(r => r.json()).then(d => d.employees ?? []),
-  });
-  const departments = useQuery<Department[]>({
-    queryKey: ["departments"],
-    queryFn: () => fetch(`${API}/departments`, { headers: apiHeaders(token) }).then(r => r.json()),
-  });
+  const { data: empData, isLoading: empLoading } = useListEmployees(
+    { page: 1, limit: 500 },
+    { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 500 }) } }
+  );
+  const { data: allDepts, isLoading: deptsLoading } = useListDepartments(
+    { query: { queryKey: getListDepartmentsQueryKey() } }
+  );
 
-  const allEmployees = employees.data ?? [];
-  const allDepts = departments.data ?? [];
+  const allEmployees = empData?.employees ?? [];
+  const isLoading = empLoading || deptsLoading;
 
   const filtered = search
     ? allEmployees.filter(e =>
@@ -151,7 +133,7 @@ export default function OrgChart() {
           { label: "Total Employees", value: allEmployees.length, hero: true },
           { label: "Active", value: active },
           { label: "On Leave", value: onLeave },
-          { label: "Departments", value: allDepts.length },
+          { label: "Departments", value: (allDepts ?? []).length },
         ].map(({ label, value, hero }) => (
           <div key={label} className="rounded-2xl p-4 shadow-sm" style={{ background: hero ? LIME : "white", border: hero ? "none" : "1px solid hsl(220 15% 91%)" }}>
             <p className={`text-xs font-medium mb-1 ${hero ? "text-foreground/70" : "text-muted-foreground"}`}>{label}</p>
@@ -174,11 +156,11 @@ export default function OrgChart() {
 
       {/* Department view */}
       {view === "dept" && !search && (
-        employees.isLoading || departments.isLoading ? (
+        isLoading ? (
           <div className="text-center py-12 text-muted-foreground text-sm">Loading…</div>
         ) : (
           <div className="space-y-4">
-            {allDepts.map((dept, i) => (
+            {(allDepts ?? []).map((dept, i) => (
               <DeptBlock key={dept.id} dept={dept} employees={allEmployees} color={DEPT_COLORS[i % DEPT_COLORS.length]} />
             ))}
           </div>
@@ -197,7 +179,7 @@ export default function OrgChart() {
               </tr>
             </thead>
             <tbody>
-              {employees.isLoading ? (
+              {isLoading ? (
                 <tr><td colSpan={6} className="py-12 text-center text-muted-foreground text-sm">Loading…</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} className="py-12 text-center text-muted-foreground text-sm">No employees found</td></tr>
