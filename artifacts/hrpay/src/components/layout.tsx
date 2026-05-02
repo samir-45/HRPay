@@ -5,6 +5,7 @@ import {
   CalendarDays, Shield, ListTodo, Building2,
   Search, Bell, LogOut, Zap, Briefcase,
   Target, FileText, Settings, Megaphone,
+  Receipt, Package, GraduationCap, Network,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-context";
@@ -21,6 +22,10 @@ const navigation = [
   { name: "Onboarding", href: "/onboarding", icon: ListTodo },
   { name: "Departments", href: "/departments", icon: Building2 },
   { name: "Announcements", href: "/announcements", icon: Megaphone },
+  { name: "Expenses", href: "/expenses", icon: Receipt },
+  { name: "Assets", href: "/assets", icon: Package },
+  { name: "Training", href: "/training", icon: GraduationCap },
+  { name: "Org Chart", href: "/org-chart", icon: Network },
   { name: "Reports", href: "/reports", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

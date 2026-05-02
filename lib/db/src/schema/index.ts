@@ -9,3 +9,6 @@ export * from "./auth";
 export * from "./recruitment";
 export * from "./performance";
 export * from "./announcements";
+export * from "./expenses";
+export * from "./assets";
+export * from "./training";

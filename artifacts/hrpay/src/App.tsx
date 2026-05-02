@@ -24,6 +24,10 @@ import Performance from "@/pages/performance";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Announcements from "@/pages/announcements";
+import Expenses from "@/pages/expenses";
+import Assets from "@/pages/assets";
+import Training from "@/pages/training";
+import OrgChart from "@/pages/org-chart";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +77,10 @@ function Router() {
       <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/announcements" component={() => <ProtectedRoute component={Announcements} />} />
+      <Route path="/expenses" component={() => <ProtectedRoute component={Expenses} />} />
+      <Route path="/assets" component={() => <ProtectedRoute component={Assets} />} />
+      <Route path="/training" component={() => <ProtectedRoute component={Training} />} />
+      <Route path="/org-chart" component={() => <ProtectedRoute component={OrgChart} />} />
       <Route component={NotFound} />
     </Switch>
   );
