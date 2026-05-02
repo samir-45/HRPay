@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useListEmployees, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useAuth, apiHeaders } from "@/components/auth-context";
 import { GraduationCap, Plus, X, BookOpen, Clock, Users, CheckCircle, PlayCircle } from "lucide-react";
 
@@ -41,8 +42,6 @@ interface Enrollment {
   completedAt?: string;
 }
 
-interface Employee { id: number; firstName: string; lastName: string; }
-
 export default function Training() {
   const { token } = useAuth();
   const qc = useQueryClient();
@@ -61,10 +60,7 @@ export default function Training() {
     queryKey: ["enrollments"],
     queryFn: () => fetch(`${API}/training/enrollments`, { headers: apiHeaders(token) }).then(r => r.json()),
   });
-  const employees = useQuery<Employee[]>({
-    queryKey: ["employees-short"],
-    queryFn: () => fetch(`${API}/employees`, { headers: apiHeaders(token) }).then(r => r.json()).then(d => d.employees ?? []),
-  });
+  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }) } });
 
   const createCourse = useMutation({
     mutationFn: () => fetch(`${API}/training/courses`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(courseForm) }).then(r => r.json()),
@@ -294,7 +290,7 @@ export default function Training() {
                 <label className="text-sm font-medium block mb-1.5">Employee</label>
                 <select value={enrollForm.employeeId} onChange={e => setEnrollForm(p => ({ ...p, employeeId: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm">
                   <option value="">Select employee…</option>
-                  {(employees.data ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+                  {(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
                 </select>
               </div>
               <div>

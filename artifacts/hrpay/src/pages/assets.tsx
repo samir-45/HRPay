@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useListEmployees, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useAuth, apiHeaders } from "@/components/auth-context";
 import { Monitor, Plus, Package, X, Pencil, Laptop, Smartphone, Wifi, Car, Armchair } from "lucide-react";
 
@@ -36,7 +37,7 @@ interface Asset {
   purchaseDate?: string;
   purchaseCost?: string;
   status: string;
-  assignedTo?: number;
+  assignedTo?: number | null;
   assignedAt?: string;
   location?: string;
   warrantyExpiry?: string;
@@ -44,8 +45,6 @@ interface Asset {
   employeeFirstName?: string;
   employeeLastName?: string;
 }
-
-interface Employee { id: number; firstName: string; lastName: string; }
 
 const emptyForm = { name: "", category: "laptop", brand: "", model: "", serialNumber: "", purchaseDate: "", purchaseCost: "", status: "available", location: "", warrantyExpiry: "", notes: "" };
 
@@ -64,10 +63,7 @@ export default function Assets() {
     queryKey: ["assets"],
     queryFn: () => fetch(`${API}/assets`, { headers: apiHeaders(token) }).then(r => r.json()),
   });
-  const employees = useQuery<Employee[]>({
-    queryKey: ["employees-short"],
-    queryFn: () => fetch(`${API}/employees`, { headers: apiHeaders(token) }).then(r => r.json()).then(d => d.employees ?? []),
-  });
+  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }) } });
 
   const create = useMutation({
     mutationFn: () => fetch(`${API}/assets`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ ...form, purchaseCost: form.purchaseCost ? parseFloat(form.purchaseCost) : undefined }) }).then(r => r.json()),
@@ -249,7 +245,7 @@ export default function Assets() {
             <p className="text-sm text-muted-foreground mb-4">{assigning.name}</p>
             <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm mb-4">
               <option value="">Unassign (set to available)</option>
-              {(employees.data ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+              {(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
             </select>
             <div className="flex gap-2.5">
               <button onClick={() => setAssigning(null)} className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium hover:bg-muted">Cancel</button>
