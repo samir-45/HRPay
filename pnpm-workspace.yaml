@@ -41,6 +41,8 @@ packages:
   - scripts
 
 catalog:
+  '@types/bcryptjs': ^2.4.6
+  bcryptjs: ^2.4.3
   '@replit/vite-plugin-cartographer': ^0.5.1
   '@replit/vite-plugin-dev-banner': ^0.1.1
   '@replit/vite-plugin-runtime-error-modal': ^0.0.6
