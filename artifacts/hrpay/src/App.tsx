@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout";
 import { AuthProvider, useAuth } from "@/components/auth-context";
+import { PermissionsProvider } from "@/components/permissions-context";
 import { AIAssistant } from "@/components/ai-assistant";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -33,6 +34,7 @@ import Expenses from "@/pages/expenses";
 import Assets from "@/pages/assets";
 import Training from "@/pages/training";
 import OrgChart from "@/pages/org-chart";
+import Permissions from "@/pages/permissions";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,6 +92,7 @@ function Router() {
       {/* Protected HR app */}
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/team" component={() => <ProtectedRoute component={TeamManagement} allowedRoles={["company_admin", "ceoo", "super_admin", "manager"]} />} />
+      <Route path="/permissions" component={() => <ProtectedRoute component={Permissions} allowedRoles={["company_admin"]} />} />
       <Route path="/employees/new" component={() => <ProtectedRoute component={EmployeeNew} />} />
       <Route path="/employees/:id" component={() => <ProtectedRoute component={EmployeeProfile} />} />
       <Route path="/employees" component={() => <ProtectedRoute component={Employees} />} />
@@ -119,9 +122,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
+          <PermissionsProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+          </PermissionsProvider>
         </AuthProvider>
         <Toaster />
       </TooltipProvider>

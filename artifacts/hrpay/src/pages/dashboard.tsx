@@ -1,4 +1,5 @@
 import React from "react";
+import { useAuth } from "@/components/auth-context";
 import {
   useGetDashboardSummary,
   useGetHeadcountByDepartment,
@@ -12,13 +13,16 @@ import {
   LineChart, Line,
   PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  Tooltip, ResponsiveContainer,
 } from "recharts";
 import { Link } from "wouter";
 import { Users, DollarSign, Clock, CalendarDays, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
+import EmployeeDashboard from "@/components/role-dashboards/employee-dashboard";
+import ManagerDashboard from "@/components/role-dashboards/manager-dashboard";
+import SupervisorDashboard from "@/components/role-dashboards/supervisor-dashboard";
+import CeooDashboard from "@/components/role-dashboards/ceoo-dashboard";
 
 const LIME = "hsl(82 80% 48%)";
-const LIME_DARK = "hsl(82 80% 38%)";
 const GRAY_CHART = "hsl(220 15% 80%)";
 
 function fmt(n: number | null | undefined) {
@@ -26,7 +30,6 @@ function fmt(n: number | null | undefined) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
-/* Tiny sparkline for KPI cards — fixed size, no ResponsiveContainer */
 function Sparkline({ data, color = LIME }: { data: number[]; color?: string }) {
   const points = data.map((v) => ({ v }));
   return (
@@ -36,7 +39,6 @@ function Sparkline({ data, color = LIME }: { data: number[]; color?: string }) {
   );
 }
 
-/* KPI card — first one gets lime green hero style */
 function KpiCard({
   label, value, sub, change, sparkData, hero = false,
 }: {
@@ -44,7 +46,6 @@ function KpiCard({
   change?: string; sparkData?: number[]; hero?: boolean;
 }) {
   const bg = hero ? LIME : "white";
-  const textColor = hero ? "text-foreground" : "text-foreground";
   const mutedColor = hero ? "text-foreground/70" : "text-muted-foreground";
   const changeBg = hero ? "bg-black/15 text-foreground" : "bg-muted text-muted-foreground";
 
@@ -64,7 +65,7 @@ function KpiCard({
       <div className="flex items-end justify-between gap-2">
         <div>
           <p className={`text-xs font-medium ${mutedColor}`}>{label}</p>
-          <p className={`text-2xl font-bold tracking-tight mt-0.5 ${textColor}`}>{value}</p>
+          <p className="text-2xl font-bold tracking-tight mt-0.5 text-foreground">{value}</p>
           {sub && <p className={`text-xs mt-0.5 ${mutedColor}`}>{sub}</p>}
         </div>
         {sparkData && (
@@ -79,7 +80,6 @@ function KpiCard({
 
 const PIE_COLORS = [LIME, "#1a1a1a", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0"];
 
-/* Custom donut label */
 function DonutLabel({ cx, cy, total }: { cx: number; cy: number; total: number }) {
   return (
     <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="fill-foreground">
@@ -89,7 +89,7 @@ function DonutLabel({ cx, cy, total }: { cx: number; cy: number; total: number }
   );
 }
 
-export default function Dashboard() {
+function AdminDashboard() {
   const summary = useGetDashboardSummary();
   const headcount = useGetHeadcountByDepartment();
   const trends = useGetPayrollTrends({ months: 6 });
@@ -100,11 +100,7 @@ export default function Dashboard() {
   const hc = headcount.data ?? [];
   const tr = trends.data ?? [];
   const ls = leaveSummary.data ?? [];
-  const ev = events.data ?? [];
 
-  const totalLeave = ls.reduce((a, l) => a + l.count, 0);
-
-  /* Fake sparkline data until real time-series per KPI is available */
   const empSpark = [18, 18, 19, 19, 19, 20, 20];
   const paySpark = tr.slice(-7).map((t) => t.totalGross / 1000);
   const leaveSpark = [1, 3, 2, 4, 3, 5, s?.pendingLeaveRequests ?? 3];
@@ -112,43 +108,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5">
-
-      {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          hero
-          label="Total Employees"
-          value={s?.totalEmployees ?? "—"}
-          sub={`+${s?.newHiresThisMonth ?? 0} this month`}
-          change="+1.23%"
-          sparkData={empSpark}
-        />
-        <KpiCard
-          label="Payroll YTD"
-          value={fmt(s?.totalPayrollYTD)}
-          sub="Gross disbursed"
-          change="+0.54%"
-          sparkData={paySpark.length ? paySpark : [3, 4, 3.5, 5, 4, 5.5, 6]}
-        />
-        <KpiCard
-          label="Pending Leave"
-          value={s?.pendingLeaveRequests ?? "—"}
-          sub="Awaiting approval"
-          change="+1.89%"
-          sparkData={leaveSpark}
-        />
-        <KpiCard
-          label="Pending Time"
-          value={s?.pendingTimeEntries ?? "—"}
-          sub="Entries to review"
-          change="-4.56%"
-          sparkData={timeSpark}
-        />
+        <KpiCard hero label="Total Employees" value={s?.totalEmployees ?? "—"} sub={`+${s?.newHiresThisMonth ?? 0} this month`} change="+1.23%" sparkData={empSpark} />
+        <KpiCard label="Payroll YTD" value={fmt(s?.totalPayrollYTD)} sub="Gross disbursed" change="+0.54%" sparkData={paySpark.length ? paySpark : [3, 4, 3.5, 5, 4, 5.5, 6]} />
+        <KpiCard label="Pending Leave" value={s?.pendingLeaveRequests ?? "—"} sub="Awaiting approval" change="+1.89%" sparkData={leaveSpark} />
+        <KpiCard label="Pending Time" value={s?.pendingTimeEntries ?? "—"} sub="Entries to review" change="-4.56%" sparkData={timeSpark} />
       </div>
 
-      {/* Row 2: Payroll trend + Leave donut */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Payroll vs Target bar chart (2/3 width) */}
         <div className="lg:col-span-2 rounded-2xl bg-white border border-border p-5 shadow-sm">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -165,10 +132,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 94%)" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(220 10% 55%)" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "hsl(220 10% 55%)" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
-                <Tooltip
-                  formatter={(v: number) => fmt(v)}
-                  contentStyle={{ borderRadius: 12, border: "1px solid hsl(220 15% 91%)", fontSize: 12 }}
-                />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 12, border: "1px solid hsl(220 15% 91%)", fontSize: 12 }} />
                 <Bar dataKey="totalGross" name="Gross" fill={LIME} radius={[6, 6, 0, 0]} />
                 <Bar dataKey="totalNet" name="Net" fill={GRAY_CHART} radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -176,7 +140,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Leave by type donut (1/3 width) */}
         <div className="rounded-2xl bg-white border border-border p-5 shadow-sm">
           <h3 className="font-bold text-foreground">Leave by Type</h3>
           <p className="text-xs text-muted-foreground mb-2">All-time requests</p>
@@ -186,19 +149,8 @@ export default function Dashboard() {
             <>
               <ResponsiveContainer width="100%" height={170}>
                 <PieChart>
-                  <Pie
-                    data={ls}
-                    dataKey="count"
-                    nameKey="type"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={52}
-                    outerRadius={76}
-                    paddingAngle={2}
-                  >
-                    {ls.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} strokeWidth={0} />
-                    ))}
+                  <Pie data={ls} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={52} outerRadius={76} paddingAngle={2}>
+                    {ls.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} strokeWidth={0} />)}
                   </Pie>
                   <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} />
                 </PieChart>
@@ -217,9 +169,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Row 3: Headcount bar + Sales Growth style area chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Headcount */}
         <div className="rounded-2xl bg-white border border-border p-5 shadow-sm">
           <h3 className="font-bold text-foreground mb-0.5">Headcount by Department</h3>
           <p className="text-xs text-muted-foreground mb-4">Active employees</p>
@@ -240,7 +190,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Payroll growth area chart */}
         <div className="rounded-2xl bg-white border border-border p-5 shadow-sm">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -268,10 +217,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 94%)" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(220 10% 55%)" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "hsl(220 10% 55%)" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
-                <Tooltip
-                  formatter={(v: number) => fmt(v)}
-                  contentStyle={{ borderRadius: 12, border: "1px solid hsl(220 15% 91%)", fontSize: 12 }}
-                />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 12, border: "1px solid hsl(220 15% 91%)", fontSize: 12 }} />
                 <Area type="monotone" dataKey="totalNet" name="Net Pay" stroke={LIME} strokeWidth={2.5} fill="url(#limeGrad)" dot={false} activeDot={{ r: 5, fill: LIME, stroke: "white", strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -279,21 +225,35 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Action chips */}
       <div className="flex gap-3 flex-wrap">
         <Link href="/leave" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:shadow-sm" style={{ background: LIME, color: "hsl(220 15% 10%)" }}>
-          <AlertCircle className="h-4 w-4" />
-          {s?.pendingLeaveRequests ?? 0} pending leave requests
+          <AlertCircle className="h-4 w-4" />{s?.pendingLeaveRequests ?? 0} pending leave requests
         </Link>
         <Link href="/time" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-foreground text-white text-sm font-semibold hover:bg-foreground/90 transition-all">
-          <Clock className="h-4 w-4" />
-          {s?.pendingTimeEntries ?? 0} time entries to approve
+          <Clock className="h-4 w-4" />{s?.pendingTimeEntries ?? 0} time entries to approve
         </Link>
         <Link href="/payroll" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-border text-sm font-semibold text-foreground hover:bg-muted transition-colors">
-          <CheckCircle2 className="h-4 w-4" style={{ color: LIME }} />
-          Next payroll: {s?.nextPayrollDate ?? "—"}
+          <CheckCircle2 className="h-4 w-4" style={{ color: LIME }} />Next payroll: {s?.nextPayrollDate ?? "—"}
         </Link>
       </div>
     </div>
   );
+}
+
+export default function Dashboard() {
+  const { user } = useAuth();
+
+  switch (user?.role) {
+    case "employee":
+      return <EmployeeDashboard />;
+    case "supervisor":
+      return <SupervisorDashboard />;
+    case "manager":
+      return <ManagerDashboard />;
+    case "ceoo":
+      return <CeooDashboard />;
+    case "company_admin":
+    default:
+      return <AdminDashboard />;
+  }
 }

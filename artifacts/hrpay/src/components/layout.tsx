@@ -7,30 +7,41 @@ import {
   Target, FileText, Settings, Megaphone,
   Receipt, Package, GraduationCap, Network,
   CheckCheck, Info, AlertCircle, PartyPopper,
-  UserCog, Crown,
+  UserCog, LockKeyhole, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { usePermissions, FeatureKey } from "@/components/permissions-context";
 
-const baseNavigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: null },
-  { name: "Team", href: "/team", icon: UserCog, roles: ["company_admin", "ceoo", "manager"] },
-  { name: "Employees", href: "/employees", icon: Users, roles: null },
-  { name: "Payroll", href: "/payroll", icon: Calculator, roles: null },
-  { name: "Time & Attendance", href: "/time", icon: Clock, roles: null },
-  { name: "Leave Management", href: "/leave", icon: CalendarDays, roles: null },
-  { name: "Recruitment", href: "/recruitment", icon: Briefcase, roles: null },
-  { name: "Performance", href: "/performance", icon: Target, roles: null },
-  { name: "Benefits", href: "/benefits", icon: Shield, roles: null },
-  { name: "Onboarding", href: "/onboarding", icon: ListTodo, roles: null },
-  { name: "Departments", href: "/departments", icon: Building2, roles: null },
-  { name: "Announcements", href: "/announcements", icon: Megaphone, roles: null },
-  { name: "Expenses", href: "/expenses", icon: Receipt, roles: null },
-  { name: "Assets", href: "/assets", icon: Package, roles: null },
-  { name: "Training", href: "/training", icon: GraduationCap, roles: null },
-  { name: "Org Chart", href: "/org-chart", icon: Network, roles: null },
-  { name: "Reports", href: "/reports", icon: FileText, roles: null },
-  { name: "Settings", href: "/settings", icon: Settings, roles: null },
+type NavItem = {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  roles: string[] | null;
+  feature: FeatureKey | null;
+  adminOnly?: boolean;
+};
+
+const baseNavigation: NavItem[] = [
+  { name: "Dashboard",        href: "/",             icon: LayoutDashboard, roles: null,                                           feature: null },
+  { name: "Permissions",      href: "/permissions",  icon: LockKeyhole,     roles: ["company_admin"],                              feature: null, adminOnly: true },
+  { name: "Team",             href: "/team",         icon: UserCog,         roles: ["company_admin", "ceoo", "manager"],           feature: "team" },
+  { name: "Employees",        href: "/employees",    icon: Users,           roles: null,                                           feature: "employees" },
+  { name: "Payroll",          href: "/payroll",      icon: Calculator,      roles: null,                                           feature: "payroll" },
+  { name: "Time & Attendance",href: "/time",         icon: Clock,           roles: null,                                           feature: "time" },
+  { name: "Leave Management", href: "/leave",        icon: CalendarDays,    roles: null,                                           feature: "leave" },
+  { name: "Recruitment",      href: "/recruitment",  icon: Briefcase,       roles: null,                                           feature: "recruitment" },
+  { name: "Performance",      href: "/performance",  icon: Target,          roles: null,                                           feature: "performance" },
+  { name: "Benefits",         href: "/benefits",     icon: Shield,          roles: null,                                           feature: "benefits" },
+  { name: "Onboarding",       href: "/onboarding",   icon: ListTodo,        roles: null,                                           feature: "onboarding" },
+  { name: "Departments",      href: "/departments",  icon: Building2,       roles: null,                                           feature: "departments" },
+  { name: "Announcements",    href: "/announcements",icon: Megaphone,       roles: null,                                           feature: "announcements" },
+  { name: "Expenses",         href: "/expenses",     icon: Receipt,         roles: null,                                           feature: "expenses" },
+  { name: "Assets",           href: "/assets",       icon: Package,         roles: null,                                           feature: "assets" },
+  { name: "Training",         href: "/training",     icon: GraduationCap,   roles: null,                                           feature: "training" },
+  { name: "Org Chart",        href: "/org-chart",    icon: Network,         roles: null,                                           feature: "org-chart" },
+  { name: "Reports",          href: "/reports",      icon: BarChart3,       roles: null,                                           feature: "reports" },
+  { name: "Settings",         href: "/settings",     icon: Settings,        roles: null,                                           feature: null },
 ];
 
 interface Announcement {
@@ -54,17 +65,10 @@ function timeAgo(dateStr: string) {
 }
 
 const PRIORITY_ICON: Record<string, React.ElementType> = {
-  urgent: AlertCircle,
-  high: AlertCircle,
-  normal: Info,
-  low: PartyPopper,
+  urgent: AlertCircle, high: AlertCircle, normal: Info, low: PartyPopper,
 };
-
 const PRIORITY_COLOR: Record<string, string> = {
-  urgent: "text-red-500",
-  high: "text-orange-500",
-  normal: "text-blue-500",
-  low: "text-emerald-500",
+  urgent: "text-red-500", high: "text-orange-500", normal: "text-blue-500", low: "text-emerald-500",
 };
 
 function NotificationBell({ token }: { token: string | null }) {
@@ -121,15 +125,12 @@ function NotificationBell({ token }: { token: string | null }) {
 
       {open && (
         <div className="absolute right-0 top-10 z-50 w-80 rounded-2xl border border-border bg-white shadow-xl overflow-hidden">
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Bell className="h-3.5 w-3.5 text-foreground" />
               <span className="text-sm font-semibold text-foreground">Notifications</span>
               {unread > 0 && (
-                <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold text-foreground" style={{ background: "hsl(82 80% 48%)" }}>
-                  {unread}
-                </span>
+                <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold text-foreground" style={{ background: "hsl(82 80% 48%)" }}>{unread}</span>
               )}
             </div>
             {unread > 0 && (
@@ -139,7 +140,6 @@ function NotificationBell({ token }: { token: string | null }) {
             )}
           </div>
 
-          {/* List */}
           <div className="max-h-80 overflow-y-auto divide-y divide-border">
             {announcements.length === 0 ? (
               <div className="py-10 text-center text-sm text-muted-foreground">
@@ -152,17 +152,9 @@ function NotificationBell({ token }: { token: string | null }) {
                 const Icon = PRIORITY_ICON[a.priority] ?? Info;
                 const color = PRIORITY_COLOR[a.priority] ?? "text-blue-500";
                 return (
-                  <button
-                    key={a.id}
-                    onClick={() => markRead(a.id)}
-                    className={cn(
-                      "w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/40 transition-colors",
-                      !isRead && "bg-lime-50/60"
-                    )}
-                  >
-                    <div className={cn("mt-0.5 shrink-0", color)}>
-                      <Icon className="h-3.5 w-3.5" />
-                    </div>
+                  <button key={a.id} onClick={() => markRead(a.id)}
+                    className={cn("w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/40 transition-colors", !isRead && "bg-lime-50/60")}>
+                    <div className={cn("mt-0.5 shrink-0", color)}><Icon className="h-3.5 w-3.5" /></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className={cn("text-xs font-semibold text-foreground truncate", !isRead && "font-bold")}>{a.title}</p>
@@ -177,7 +169,6 @@ function NotificationBell({ token }: { token: string | null }) {
             )}
           </div>
 
-          {/* Footer */}
           {announcements.length > 0 && (
             <div className="border-t border-border px-4 py-2.5">
               <Link href="/announcements" onClick={() => setOpen(false)} className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -194,10 +185,13 @@ function NotificationBell({ token }: { token: string | null }) {
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logout, token } = useAuth();
+  const { hasFeature } = usePermissions();
 
-  const navigation = baseNavigation.filter(item =>
-    item.roles === null || (user?.role && item.roles.includes(user.role))
-  );
+  const navigation = baseNavigation.filter(item => {
+    if (item.roles !== null && (!user?.role || !item.roles.includes(user.role))) return false;
+    if (item.feature !== null && !hasFeature(item.feature)) return false;
+    return true;
+  });
 
   const activeItem = navigation.find(
     (item) => item.href === location || (item.href !== "/" && location.startsWith(item.href))
@@ -222,18 +216,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Nav */}
         <nav className="flex flex-1 flex-col overflow-y-auto px-2.5 py-2 gap-0.5">
           {navigation.map((item) => {
-            const isActive =
-              location === item.href ||
-              (item.href !== "/" && location.startsWith(item.href));
+            const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
                   "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-all",
-                  isActive
-                    ? "bg-foreground text-white shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  isActive ? "bg-foreground text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white" : "text-muted-foreground")} />
@@ -253,15 +243,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
         </nav>
 
-        {/* Bottom card — upgrade prompt for company users, branding for others */}
+        {/* Upgrade prompt */}
         <div className="mx-2.5 mb-3 rounded-2xl p-3.5 text-center" style={{ background: "hsl(82 80% 48%)" }}>
           <div className="mx-auto mb-1.5 flex size-8 items-center justify-center rounded-full bg-black/15">
             <Zap className="h-4 w-4 text-white" />
           </div>
           <p className="text-xs font-bold text-foreground mb-0.5">Get Pro Access</p>
-          <p className="text-[10px] text-foreground/70 mb-2 leading-snug">
-            Explore exclusive premium features
-          </p>
+          <p className="text-[10px] text-foreground/70 mb-2 leading-snug">Explore exclusive premium features</p>
           <button className="w-full rounded-xl bg-foreground px-3 py-1.5 text-[10px] font-semibold text-white hover:bg-foreground/90 transition-colors">
             Upgrade Plan
           </button>
@@ -273,9 +261,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Header */}
         <header className="flex h-14 shrink-0 items-center justify-between bg-white border-b border-border px-5">
           <div>
-            <h1 className="text-sm font-bold text-foreground tracking-tight">
-              {activeItem?.name ?? "HRPay"}
-            </h1>
+            <h1 className="text-sm font-bold text-foreground tracking-tight">{activeItem?.name ?? "HRPay"}</h1>
             <p className="text-[10px] text-muted-foreground">
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
@@ -287,9 +273,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
             <NotificationBell token={token} />
             <div className="flex items-center gap-2 pl-2 border-l border-border ml-0.5">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-foreground text-white text-[11px] font-bold">
-                {initials}
-              </div>
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-foreground text-white text-[11px] font-bold">{initials}</div>
               <div className="hidden sm:block">
                 <p className="text-xs font-semibold text-foreground leading-none">{user?.name ?? "Admin User"}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{planLabel}</p>
@@ -299,9 +283,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 overflow-y-auto p-5">
-          <div className="mx-auto max-w-7xl">
-            {children}
-          </div>
+          <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
     </div>
