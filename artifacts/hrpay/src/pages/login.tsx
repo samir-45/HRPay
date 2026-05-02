@@ -6,7 +6,7 @@ import { Shield, ArrowLeft } from "lucide-react";
 const LIME = "hsl(82 80% 48%)";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const [, setLocation] = useLocation();
 
   const params = new URLSearchParams(window.location.search);
@@ -16,6 +16,16 @@ export default function Login() {
   const [password, setPassword] = useState(isAdminPortal ? "Admin@123" : "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAdminPortal) return;
+    const stored = localStorage.getItem("hrpay_token");
+    if (!stored) return;
+    try {
+      const payload = JSON.parse(atob(stored.split(".")[1]));
+      if (payload.role === "super_admin") logout();
+    } catch {}
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

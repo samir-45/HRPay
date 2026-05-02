@@ -81,7 +81,7 @@ function Router() {
       <Route path="/register" component={RegisterCompany} />
       <Route path="/accept-invite" component={AcceptInvite} />
       <Route path="/login">
-        {!isLoading && user ? <Redirect to={user.role === "super_admin" ? "/super-admin" : "/dashboard"} /> : <Login />}
+        {!isLoading && user && user.role !== "super_admin" ? <Redirect to="/dashboard" /> : <Login />}
       </Route>
 
       <Route path="/super-admin" component={SuperAdminRoute} />
