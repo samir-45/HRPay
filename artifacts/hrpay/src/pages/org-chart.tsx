@@ -109,7 +109,7 @@ export default function OrgChart() {
 
   const employees = useQuery<Employee[]>({
     queryKey: ["employees"],
-    queryFn: () => fetch(`${API}/employees`, { headers: apiHeaders(token) }).then(r => r.json()),
+    queryFn: () => fetch(`${API}/employees`, { headers: apiHeaders(token) }).then(r => r.json()).then(d => d.employees ?? []),
   });
   const departments = useQuery<Department[]>({
     queryKey: ["departments"],

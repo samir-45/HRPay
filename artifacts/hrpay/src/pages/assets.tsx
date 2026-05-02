@@ -66,7 +66,7 @@ export default function Assets() {
   });
   const employees = useQuery<Employee[]>({
     queryKey: ["employees-short"],
-    queryFn: () => fetch(`${API}/employees`, { headers: apiHeaders(token) }).then(r => r.json()),
+    queryFn: () => fetch(`${API}/employees`, { headers: apiHeaders(token) }).then(r => r.json()).then(d => d.employees ?? []),
   });
 
   const create = useMutation({
