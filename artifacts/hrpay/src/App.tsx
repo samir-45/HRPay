@@ -7,7 +7,12 @@ import { AppLayout } from "@/components/layout";
 import { AuthProvider, useAuth } from "@/components/auth-context";
 import { AIAssistant } from "@/components/ai-assistant";
 import NotFound from "@/pages/not-found";
+import Landing from "@/pages/landing";
 import Login from "@/pages/login";
+import RegisterCompany from "@/pages/register-company";
+import AcceptInvite from "@/pages/accept-invite";
+import SuperAdmin from "@/pages/super-admin";
+import TeamManagement from "@/pages/team-management";
 import Dashboard from "@/pages/dashboard";
 import Employees from "@/pages/employees";
 import EmployeeNew from "@/pages/employee-new";
@@ -35,17 +40,22 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { user, isLoading } = useAuth();
-  if (isLoading) return (
+function LoadingScreen() {
+  return (
     <div className="flex h-screen items-center justify-center" style={{ background: "hsl(220 20% 96%)" }}>
       <div className="flex flex-col items-center gap-3">
-        <div className="size-8 rounded-full animate-spin border-2 border-muted border-t-foreground" style={{ borderTopColor: "hsl(82 80% 48%)" }} />
+        <div className="size-8 rounded-full animate-spin border-2 border-muted" style={{ borderTopColor: "hsl(82 80% 48%)" }} />
         <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     </div>
   );
+}
+
+function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType; allowedRoles?: string[] }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) return <Redirect to="/" />;
   return (
     <AppLayout>
       <Component />
@@ -54,14 +64,32 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   );
 }
 
+function SuperAdminRoute() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <LoadingScreen />;
+  if (!user) return <Redirect to="/login" />;
+  if (user.role !== "super_admin") return <Redirect to="/" />;
+  return <SuperAdmin />;
+}
+
 function Router() {
   const { user, isLoading } = useAuth();
   return (
     <Switch>
+      {/* Public routes */}
+      <Route path="/landing" component={Landing} />
+      <Route path="/register" component={RegisterCompany} />
+      <Route path="/accept-invite" component={AcceptInvite} />
       <Route path="/login">
-        {!isLoading && user ? <Redirect to="/" /> : <Login />}
+        {!isLoading && user ? <Redirect to={user.role === "super_admin" ? "/super-admin" : "/"} /> : <Login />}
       </Route>
+
+      {/* Super admin panel */}
+      <Route path="/super-admin" component={SuperAdminRoute} />
+
+      {/* Protected HR app */}
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
+      <Route path="/team" component={() => <ProtectedRoute component={TeamManagement} allowedRoles={["company_admin", "ceoo", "super_admin", "manager"]} />} />
       <Route path="/employees/new" component={() => <ProtectedRoute component={EmployeeNew} />} />
       <Route path="/employees/:id" component={() => <ProtectedRoute component={EmployeeProfile} />} />
       <Route path="/employees" component={() => <ProtectedRoute component={Employees} />} />

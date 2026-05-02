@@ -16,7 +16,13 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      setLocation("/");
+      const stored = localStorage.getItem("hrpay_token");
+      if (stored) {
+        const payload = JSON.parse(atob(stored.split(".")[1]));
+        setLocation(payload.role === "super_admin" ? "/super-admin" : "/");
+      } else {
+        setLocation("/");
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -115,6 +121,11 @@ export default function Login() {
               <p>Email: <span className="text-foreground">superadmin@hrpay.com</span></p>
               <p>Password: <span className="text-foreground">Admin@123</span></p>
             </div>
+
+            <p className="mt-5 text-center text-xs text-muted-foreground">
+              New company?{" "}
+              <a href="/register" className="font-semibold text-foreground hover:underline">Register your company →</a>
+            </p>
           </div>
         </div>
       </div>

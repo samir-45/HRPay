@@ -7,28 +7,30 @@ import {
   Target, FileText, Settings, Megaphone,
   Receipt, Package, GraduationCap, Network,
   CheckCheck, Info, AlertCircle, PartyPopper,
+  UserCog, Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, apiHeaders } from "@/components/auth-context";
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Employees", href: "/employees", icon: Users },
-  { name: "Payroll", href: "/payroll", icon: Calculator },
-  { name: "Time & Attendance", href: "/time", icon: Clock },
-  { name: "Leave Management", href: "/leave", icon: CalendarDays },
-  { name: "Recruitment", href: "/recruitment", icon: Briefcase },
-  { name: "Performance", href: "/performance", icon: Target },
-  { name: "Benefits", href: "/benefits", icon: Shield },
-  { name: "Onboarding", href: "/onboarding", icon: ListTodo },
-  { name: "Departments", href: "/departments", icon: Building2 },
-  { name: "Announcements", href: "/announcements", icon: Megaphone },
-  { name: "Expenses", href: "/expenses", icon: Receipt },
-  { name: "Assets", href: "/assets", icon: Package },
-  { name: "Training", href: "/training", icon: GraduationCap },
-  { name: "Org Chart", href: "/org-chart", icon: Network },
-  { name: "Reports", href: "/reports", icon: FileText },
-  { name: "Settings", href: "/settings", icon: Settings },
+const baseNavigation = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: null },
+  { name: "Team", href: "/team", icon: UserCog, roles: ["company_admin", "ceoo", "manager"] },
+  { name: "Employees", href: "/employees", icon: Users, roles: null },
+  { name: "Payroll", href: "/payroll", icon: Calculator, roles: null },
+  { name: "Time & Attendance", href: "/time", icon: Clock, roles: null },
+  { name: "Leave Management", href: "/leave", icon: CalendarDays, roles: null },
+  { name: "Recruitment", href: "/recruitment", icon: Briefcase, roles: null },
+  { name: "Performance", href: "/performance", icon: Target, roles: null },
+  { name: "Benefits", href: "/benefits", icon: Shield, roles: null },
+  { name: "Onboarding", href: "/onboarding", icon: ListTodo, roles: null },
+  { name: "Departments", href: "/departments", icon: Building2, roles: null },
+  { name: "Announcements", href: "/announcements", icon: Megaphone, roles: null },
+  { name: "Expenses", href: "/expenses", icon: Receipt, roles: null },
+  { name: "Assets", href: "/assets", icon: Package, roles: null },
+  { name: "Training", href: "/training", icon: GraduationCap, roles: null },
+  { name: "Org Chart", href: "/org-chart", icon: Network, roles: null },
+  { name: "Reports", href: "/reports", icon: FileText, roles: null },
+  { name: "Settings", href: "/settings", icon: Settings, roles: null },
 ];
 
 interface Announcement {
@@ -193,11 +195,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logout, token } = useAuth();
 
+  const navigation = baseNavigation.filter(item =>
+    item.roles === null || (user?.role && item.roles.includes(user.role))
+  );
+
   const activeItem = navigation.find(
     (item) => item.href === location || (item.href !== "/" && location.startsWith(item.href))
   );
 
   const initials = user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() ?? "AD";
+  const planLabel = user?.role === "company_admin" ? "Company Admin" : user?.role?.replace(/_/g, " ") ?? "User";
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "hsl(220 20% 96%)" }}>
@@ -246,7 +253,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
         </nav>
 
-        {/* Upgrade card */}
+        {/* Bottom card — upgrade prompt for company users, branding for others */}
         <div className="mx-2.5 mb-3 rounded-2xl p-3.5 text-center" style={{ background: "hsl(82 80% 48%)" }}>
           <div className="mx-auto mb-1.5 flex size-8 items-center justify-center rounded-full bg-black/15">
             <Zap className="h-4 w-4 text-white" />
@@ -256,7 +263,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             Explore exclusive premium features
           </p>
           <button className="w-full rounded-xl bg-foreground px-3 py-1.5 text-[10px] font-semibold text-white hover:bg-foreground/90 transition-colors">
-            Upgrade $52
+            Upgrade Plan
           </button>
         </div>
       </aside>
@@ -285,7 +292,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="hidden sm:block">
                 <p className="text-xs font-semibold text-foreground leading-none">{user?.name ?? "Admin User"}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{user?.role?.replace("_", " ") ?? "Admin"}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{planLabel}</p>
               </div>
             </div>
           </div>

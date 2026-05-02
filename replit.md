@@ -1,6 +1,6 @@
-# HRPay — HR & Payroll Management Platform
+# HRPay — Multi-Tenant HR & Payroll SaaS Platform
 
-A full-stack HR & Payroll SaaS built for growing businesses (10–500 employees). Research-informed design targeting the $33B+ HR software market.
+A full-stack multi-tenant HR & Payroll SaaS. Companies subscribe (Free/Starter/Pro), admins register and invite staff, and a Super Admin manages all companies from a platform dashboard.
 
 ## Architecture
 
