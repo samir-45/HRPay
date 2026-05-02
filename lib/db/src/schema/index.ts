@@ -5,3 +5,7 @@ export * from "./timeTracking";
 export * from "./leave";
 export * from "./benefits";
 export * from "./onboarding";
+export * from "./auth";
+export * from "./recruitment";
+export * from "./performance";
+export * from "./announcements";

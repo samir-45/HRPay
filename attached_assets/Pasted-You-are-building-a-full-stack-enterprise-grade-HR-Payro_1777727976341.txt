@@ -1,0 +1,399 @@
+You are building a full-stack, enterprise-grade HR & Payroll Management SaaS for companies with up to 1,001 employees. Audit everything already built, identify all missing features, and implement everything end-to-end. Use a modern stack: Next.js 14 (App Router) + TypeScript for frontend, Node.js + Express (or Next.js API routes) for backend, PostgreSQL with Prisma ORM for database, and Tailwind CSS + shadcn/ui for UI. Deploy-ready on Replit.
+
+═══════════════════════════════════════
+SECTION 1 — AUTHENTICATION & MULTI-TENANCY
+═══════════════════════════════════════
+- Multi-tenant SaaS architecture (each company = isolated tenant)
+- JWT-based auth with refresh tokens + secure HttpOnly cookies
+- Email/password login with bcrypt hashing
+- Optional SSO (Google OAuth)
+- Multi-Factor Authentication (TOTP/email OTP)
+- Session management with device tracking
+- Forgot password / reset password flow
+- First-time setup wizard for new tenants (company profile, branding, admin account)
+
+═══════════════════════════════════════
+SECTION 2 — ROLES & PERMISSIONS ENGINE (CRITICAL)
+═══════════════════════════════════════
+Build a fully dynamic, database-driven RBAC (Role-Based Access Control) system:
+
+BUILT-IN ROLES (non-deletable):
+  - Super Admin: full unrestricted access to everything across all tenants
+  - HR Admin: full HR module access
+  - Payroll Manager: payroll + finance modules
+  - Department Manager: their own team only
+  - Employee: self-service only
+
+CUSTOM ROLES (Super Admin can create/edit/delete):
+  - Super Admin can create any named custom role (e.g., "Regional HR", "Finance Auditor")
+  - Each role has a granular permission matrix:
+    * Per-module access: Dashboard, Employees, Payroll, Attendance, Leave, Recruitment, Performance, Training, Benefits, Reports, Settings, AI Assistant
+    * Per-action access: View, Create, Edit, Delete, Export, Approve
+    * Per-department scope: All departments, Own department only, Specific departments
+  - Super Admin can assign any user to any role from any page (user card, employee profile, or dedicated Roles Management page)
+  - Role changes take effect immediately without re-login
+  - Permission inheritance and override rules
+  - Audit log of all role/permission changes
+
+ROLES MANAGEMENT PAGE:
+  - Visual permission matrix grid (modules × actions as checkboxes)
+  - Drag-and-drop role priority ordering
+  - Role duplication / template system
+  - See which users are assigned each role
+  - Bulk role assignment
+
+═══════════════════════════════════════
+SECTION 3 — CORE HR MODULE
+═══════════════════════════════════════
+Employee Management:
+  - Employee master record: personal info, contact, emergency contacts, photo upload
+  - Employment details: department, designation, employment type (full-time/part-time/contract/intern), start date, probation end date, confirmation date
+  - Document vault: upload/download contracts, ID proofs, certificates, offer letters, warning letters
+  - Org chart (interactive, drag-to-rearrange hierarchy)
+  - Employee lifecycle: onboarding → active → on-leave → resigned → terminated
+  - Onboarding workflow: checklist builder, task assignment, welcome email automation
+  - Offboarding workflow: exit interview, asset return checklist, final settlement trigger
+  - Employee self-service portal: update personal info, view payslips, apply leave, view attendance
+  - Bulk import employees via CSV/Excel with validation
+  - Employee ID auto-generation with configurable format
+  - Custom fields builder (HR can add any extra field to employee profiles)
+
+Department & Designation Management:
+  - Create/edit/delete departments and sub-departments
+  - Designation/job title library with grade levels
+  - Headcount planning per department
+
+═══════════════════════════════════════
+SECTION 4 — PAYROLL MODULE
+═══════════════════════════════════════
+Payroll Configuration:
+  - Salary structure builder: base pay + configurable allowances (HRA, transport, medical, etc.) + deductions (tax, PF, insurance, loans)
+  - Pay grade / salary bands
+  - Multiple pay schedules: monthly, bi-weekly, weekly
+  - Currency support with multi-currency option
+  - Tax slab configuration (admin-configurable, not hardcoded)
+  - Statutory deductions configuration (PF, ESI, TDS or country-specific)
+
+Payroll Processing:
+  - One-click payroll run with preview before finalizing
+  - Automated calculation: gross → deductions → net pay
+  - Attendance-linked payroll (present days, late deductions, overtime pay)
+  - Leave-linked payroll (paid/unpaid leave deductions)
+  - Loan & advance management with EMI deductions
+  - Bonus, incentive, commission, reimbursement processing
+  - Payroll lock after finalization (prevent edits)
+  - Payroll revision history
+
+Payslips:
+  - Auto-generated professional PDF payslips
+  - Email payslips to employees automatically
+  - Employee can view/download all historical payslips
+  - Customizable payslip template (logo, layout, fields)
+
+Payroll Reports:
+  - Payroll summary report
+  - Bank transfer advice sheet (for bulk salary transfer)
+  - Statutory compliance reports
+  - Year-to-date earnings report
+  - Cost center / department payroll breakdown
+
+═══════════════════════════════════════
+SECTION 5 — ATTENDANCE & TIME MANAGEMENT
+═══════════════════════════════════════
+- Multiple check-in methods: manual, QR code, GPS-based (geofencing), IP-based
+- Shift management: create multiple shifts, assign to employees/departments
+- Flexible/remote work schedule support
+- Overtime tracking and approval workflow
+- Late arrival / early departure tracking with configurable grace period
+- Work-from-home (WFH) logging
+- Attendance regularization request (employee can correct missed punches)
+- Monthly attendance summary per employee
+- Real-time attendance dashboard
+- Bulk attendance import (CSV)
+- Integration with payroll (auto-deduct for absent days)
+
+═══════════════════════════════════════
+SECTION 6 — LEAVE MANAGEMENT
+═══════════════════════════════════════
+- Leave type configuration: Annual, Sick, Casual, Maternity, Paternity, Unpaid, Compensatory, custom types
+- Leave balance setup: accrual rules, carry-forward rules, max balance caps
+- Leave application workflow: apply → manager approval → HR approval (configurable approval levels)
+- Team leave calendar (see who's on leave)
+- Leave encashment calculation
+- Holiday calendar management (public holidays, optional holidays, regional holidays)
+- Advance leave application
+- Leave history and balance visible to employee
+- Email/notification on approval or rejection
+
+═══════════════════════════════════════
+SECTION 7 — RECRUITMENT / ATS MODULE
+═══════════════════════════════════════
+- Job requisition workflow (manager requests → HR approves → publishes)
+- Job posting builder with rich text JD editor
+- Careers page embed code (for company website)
+- Application tracking board (Kanban: Applied → Screening → Interview → Offer → Hired/Rejected)
+- Resume/CV upload and storage
+- Interview scheduling with calendar invites
+- Interview feedback forms (structured scorecard)
+- Offer letter generation from template
+- Onboarding trigger on hire
+- Recruitment analytics: time-to-hire, source tracking, funnel conversion
+
+═══════════════════════════════════════
+SECTION 8 — PERFORMANCE MANAGEMENT
+═══════════════════════════════════════
+- Goal setting (OKRs / KPIs): company → department → individual cascade
+- Performance review cycles: quarterly, half-yearly, annual (configurable)
+- 360-degree feedback: self-review + manager review + peer review
+- Review form builder (rating scales, text fields, custom questions)
+- Performance improvement plan (PIP) module
+- Competency framework library
+- Performance history timeline per employee
+- Bell-curve normalization tool
+- Performance-linked bonus trigger to payroll
+
+═══════════════════════════════════════
+SECTION 9 — TRAINING & LEARNING MODULE
+═══════════════════════════════════════
+- Training program catalog
+- Training session scheduling (online/offline)
+- Employee enrollment and attendance tracking
+- Training needs assessment
+- Certification tracking with expiry alerts
+- Training effectiveness feedback form
+- Training cost tracking
+- Skills matrix per employee
+
+═══════════════════════════════════════
+SECTION 10 — BENEFITS ADMINISTRATION
+═══════════════════════════════════════
+- Benefits plan catalog: health insurance, life insurance, dental, vision, retirement plans
+- Eligibility rules per employment type / grade
+- Employee benefits enrollment portal
+- Benefits cost tracking (employer vs employee contribution)
+- Open enrollment periods
+- Benefits statement in payslip
+
+═══════════════════════════════════════
+SECTION 11 — EXPENSE & REIMBURSEMENT
+═══════════════════════════════════════
+- Expense claim submission with receipt upload
+- Expense categories and limits configuration
+- Multi-level approval workflow
+- Reimbursement trigger to payroll
+- Expense analytics by category/department
+
+═══════════════════════════════════════
+SECTION 12 — ASSET MANAGEMENT
+═══════════════════════════════════════
+- Asset catalog (laptops, phones, access cards, etc.)
+- Asset assignment to employee
+- Asset return on offboarding (auto-checklist)
+- Maintenance schedule
+- Asset audit log
+
+═══════════════════════════════════════
+SECTION 13 — ANNOUNCEMENTS & COMMUNICATIONS
+═══════════════════════════════════════
+- Company-wide announcement board
+- Department/team targeted announcements
+- Policy document library (upload and publish handbooks, policies)
+- Employee survey builder (pulse surveys)
+- Birthday / work anniversary automated greetings
+- Notification center (in-app + email + optional SMS)
+
+═══════════════════════════════════════
+SECTION 14 — REPORTS & ANALYTICS DASHBOARD
+═══════════════════════════════════════
+Super Admin / HR Admin Dashboard:
+  - Total headcount, attrition rate, new hires this month
+  - Department-wise headcount chart
+  - Payroll cost trend (monthly)
+  - Attendance rate heatmap
+  - Leave utilization chart
+  - Open positions vs. filled positions
+  - Performance score distribution
+  - Gender diversity ratio
+  - AI-generated narrative summaries of key metrics
+
+Custom Report Builder:
+  - Drag-and-drop field selector
+  - Filter by date range, department, designation, employment type
+  - Export to PDF, Excel, CSV
+  - Schedule automated report emails
+
+Pre-built reports:
+  - Employee master report
+  - Headcount report
+  - Attrition report
+  - Payroll summary
+  - Attendance register
+  - Leave report
+  - Recruitment funnel report
+
+═══════════════════════════════════════
+SECTION 15 — AI ASSISTANT (BRING YOUR OWN KEY)
+═══════════════════════════════════════
+IMPLEMENTATION:
+  - On ANY page in the app, show a floating AI assistant button (chat icon, bottom-right)
+  - On first click (or via Settings > AI Configuration), show a modal:
+      * "Enter your AI API Key"
+      * Provider selector dropdown: OpenAI, Anthropic (Claude), Groq, xAI (Grok), Google Gemini, Mistral, Cohere, Azure OpenAI
+      * Model selector (auto-populated based on provider): e.g., gpt-4o, claude-sonnet-4-5, gemma-2-9b-it, etc.
+      * "Test Connection" button
+      * Save key securely (encrypted in DB, scoped to tenant)
+  - Once key is set, full AI chat panel opens anywhere in the app
+  - AI has CONTEXT AWARENESS — it knows which page user is on and injects relevant data
+
+AI CAPABILITIES:
+  HR Context:
+    - "Summarize attendance issues this month" → pulls real attendance data and summarizes
+    - "Which employees have used the most sick leave?" → queries leave data
+    - "Draft a performance improvement plan for [employee]" → generates structured PIP
+    - "Generate an offer letter for [candidate]" → fills template with candidate data
+    - "What is our current attrition rate and how does it compare to last quarter?" → live analytics
+    - "Suggest interview questions for a [job title] role"
+    
+  Payroll Context:
+    - "Why is [employee]'s net pay lower this month?" → explains deductions
+    - "Generate payroll summary for October" → pulls and summarizes payroll data
+    - "Flag any payroll anomalies this month" → detects outliers
+
+  General HR Q&A:
+    - Answer HR policy questions from uploaded company handbook
+    - Generate job descriptions, HR policies, email templates
+    - Sentiment analysis on employee survey responses
+
+  AI Settings page (under Settings > AI):
+    - View/edit/delete saved API keys per provider
+    - Usage tracker (estimated tokens used)
+    - Per-role AI access control (Super Admin can restrict which roles can use AI)
+    - AI audit log (who asked what — for compliance)
+
+═══════════════════════════════════════
+SECTION 16 — SETTINGS & ADMINISTRATION
+═══════════════════════════════════════
+Company Settings:
+  - Company profile: name, logo, address, registration number, fiscal year
+  - Branding: primary color, secondary color (white-labeling ready)
+  - Timezone, locale, date format, currency
+  - Email server (SMTP) configuration
+  - Notification preferences
+
+Payroll Settings:
+  - Pay period configuration
+  - Tax slabs
+  - Statutory compliance settings
+  - Bank details for bulk transfer
+
+Integrations (stubs + ready hooks):
+  - Slack / Teams webhook (notifications)
+  - Calendar sync (Google Calendar, Outlook)
+  - Accounting export (QuickBooks, Xero format)
+  - Biometric device integration (API webhook endpoint)
+
+Security Settings:
+  - Password policy (complexity, expiry)
+  - IP whitelist for admin access
+  - Force MFA for certain roles
+  - Login attempt lockout rules
+
+Audit Trail:
+  - Every create/update/delete action logged with: user, timestamp, IP, old value → new value
+  - Filterable, exportable audit log page
+
+═══════════════════════════════════════
+SECTION 17 — EMPLOYEE SELF-SERVICE PORTAL
+═══════════════════════════════════════
+Dedicated /employee dashboard for non-HR users showing:
+  - My Profile (view + edit personal info)
+  - My Payslips (view/download all)
+  - Apply for Leave (with balance display)
+  - My Attendance (monthly view)
+  - My Goals & Performance
+  - My Training
+  - My Benefits
+  - Raise a Request (IT issue, expense claim, document request)
+  - Company Announcements & Policies
+  - AI Assistant (if enabled by admin)
+
+═══════════════════════════════════════
+SECTION 18 — NOTIFICATIONS SYSTEM
+═══════════════════════════════════════
+- In-app notification bell with unread count
+- Email notifications for: leave approval/rejection, payslip published, onboarding tasks, performance review due, policy updates, birthday/anniversary
+- Notification templates (admin-editable)
+- Notification preferences (employee can opt out of non-critical alerts)
+
+═══════════════════════════════════════
+SECTION 19 — MOBILE RESPONSIVENESS
+═══════════════════════════════════════
+- Fully responsive on mobile (all pages, all tables use horizontal scroll on mobile)
+- Mobile-first employee self-service views
+- Touch-friendly attendance check-in (QR scanner via camera)
+
+═══════════════════════════════════════
+SECTION 20 — DATABASE SCHEMA
+═══════════════════════════════════════
+Use PostgreSQL with Prisma. Core tables needed:
+tenants, users, roles, permissions, role_permissions, user_roles,
+employees, departments, designations, employment_types,
+salary_structures, salary_components, payroll_runs, payslips,
+attendance_records, shifts, shift_assignments,
+leave_types, leave_balances, leave_applications, holiday_calendars,
+job_postings, applications, interview_schedules,
+performance_cycles, performance_reviews, goals,
+training_programs, training_enrollments,
+benefits_plans, employee_benefits,
+assets, asset_assignments,
+expenses, expense_approvals,
+announcements, surveys, survey_responses,
+notifications, audit_logs,
+ai_configs, ai_conversations
+
+═══════════════════════════════════════
+SECTION 21 — TECH STACK & PROJECT STRUCTURE
+═══════════════════════════════════════
+/app                    → Next.js App Router pages
+/app/api               → API route handlers
+/components            → Reusable UI components
+/components/ai         → AI Assistant components
+/lib                   → Prisma client, auth helpers, utils
+/lib/ai                → AI provider abstraction layer (supports OpenAI SDK-compatible APIs)
+/prisma                → schema.prisma + seed.ts
+/public                → Static assets
+
+Dependencies to install:
+next, react, typescript, tailwindcss, @shadcn/ui, prisma, @prisma/client,
+next-auth, bcryptjs, jsonwebtoken, zod (validation),
+recharts (charts), react-pdf (payslip PDF), 
+exceljs (Excel export), react-hook-form,
+openai (works with OpenAI-compatible APIs including Groq, xAI),
+@anthropic-ai/sdk, nodemailer, date-fns, lucide-react
+
+AI Provider Abstraction Layer:
+Create /lib/ai/providers.ts that routes to the correct SDK based on stored provider:
+- OpenAI / Groq / xAI / Mistral → use openai SDK with custom baseURL
+- Anthropic → use @anthropic-ai/sdk
+- Google Gemini → use @google/generative-ai
+All providers normalized to a single chat(messages, systemPrompt) function.
+
+═══════════════════════════════════════
+EXECUTION INSTRUCTIONS FOR REPLIT AI
+═══════════════════════════════════════
+1. First, AUDIT all existing files and list what is already implemented vs missing
+2. Generate the complete Prisma schema covering all 20+ tables
+3. Run: npx prisma migrate dev --name init
+4. Build all API routes with proper auth middleware and role-permission checks on every endpoint
+5. Build all frontend pages with the exact modules listed above
+6. Implement the AI assistant with the BYOK (Bring Your Own Key) system with provider selector
+7. Implement the RBAC roles management page with visual permission matrix
+8. Seed the database with: 1 Super Admin account, sample departments, sample employees (at least 10), sample payroll data
+9. Create a README.md with all default login credentials and setup instructions
+10. Ensure the app runs with: npm run dev
+
+Default Super Admin credentials to seed:
+Email: superadmin@hrms.com
+Password: SuperAdmin@123
+
+Make the UI professional, modern, and clean. Use a sidebar navigation with collapsible sections. Dark mode support. Every table must have search, filter, sort, and export. Every form must have validation. Every destructive action must have a confirmation dialog.
