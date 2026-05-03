@@ -620,6 +620,7 @@ export default function Help() {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState("getting-started");
   const [search, setSearch] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return SECTIONS;
@@ -636,8 +637,37 @@ export default function Help() {
 
   return (
     <div className="flex gap-0 -m-5" style={{ height: "calc(100vh - 3.5rem)" }}>
-      {/* Left sidebar */}
-      <aside className="w-56 shrink-0 border-r border-border bg-white flex flex-col overflow-hidden">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-white flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-3.5 border-b border-border flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search help…"
+                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-border text-xs bg-muted/30 focus:outline-none" />
+              </div>
+            </div>
+            <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
+              {(isSearching ? filtered : SECTIONS).map(s => (
+                <button key={s.id} onClick={() => { setActiveSection(s.id); setSearch(""); setSidebarOpen(false); }}
+                  className={cn("w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition-all",
+                    activeSection === s.id && !isSearching ? "bg-foreground text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+                  <div className={cn("flex size-6 shrink-0 items-center justify-center rounded-lg text-[10px]",
+                    activeSection === s.id && !isSearching ? "bg-white/20" : s.color)}>
+                    <s.icon className="h-3.5 w-3.5" />
+                  </div>
+                  <p className="text-xs font-semibold truncate">{s.title}</p>
+                </button>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop Left sidebar */}
+      <aside className="hidden md:flex w-56 shrink-0 border-r border-border bg-white flex-col overflow-hidden">
         <div className="p-3.5 border-b border-border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -686,6 +716,13 @@ export default function Help() {
 
       {/* Main content */}
       <div className="flex-1 overflow-y-auto bg-muted/20">
+        {/* Mobile header bar */}
+        <div className="md:hidden flex items-center gap-2 px-4 py-2 border-b border-border bg-white sticky top-0 z-10">
+          <button onClick={() => setSidebarOpen(true)} className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 hover:bg-muted transition-all">
+            <BookOpen className="h-3.5 w-3.5" /> Browse Topics
+          </button>
+          <span className="text-xs text-muted-foreground truncate">{section.title}</span>
+        </div>
         {isSearching ? (
           <div className="p-6 space-y-4">
             <p className="text-sm font-semibold text-foreground">{filtered.length} result{filtered.length !== 1 ? "s" : ""} for "{search}"</p>

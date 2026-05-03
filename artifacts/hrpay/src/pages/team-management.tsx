@@ -132,7 +132,7 @@ export default function TeamManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-foreground">Team Management</h2>
           <p className="text-sm text-muted-foreground">
@@ -141,9 +141,9 @@ export default function TeamManagement() {
           </p>
         </div>
         <button onClick={() => { setShowInvite(true); setInviteResult(null); setInviteError(""); }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground hover:opacity-90 transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground hover:opacity-90 transition-all shrink-0"
           style={{ background: LIME }}>
-          <Plus className="h-4 w-4" /> Invite Member
+          <Plus className="h-4 w-4" /><span className="hidden sm:inline">Invite Member</span>
         </button>
       </div>
 
@@ -169,7 +169,8 @@ export default function TeamManagement() {
               No members yet. Invite your first team member.
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[540px]">
               <thead className="border-b border-border bg-muted/30">
                 <tr>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground">Member</th>
@@ -231,6 +232,7 @@ export default function TeamManagement() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -247,7 +249,8 @@ export default function TeamManagement() {
               No invitations sent yet.
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[520px]">
               <thead className="border-b border-border bg-muted/30">
                 <tr>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground">Invitee</th>
@@ -295,6 +298,7 @@ export default function TeamManagement() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

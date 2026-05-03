@@ -45,25 +45,25 @@ export default function Employees() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Employee Directory</h2>
           <p className="text-sm text-muted-foreground">{data?.total ?? 0} employees</p>
         </div>
-        <Link href="/employees/new" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-          <Plus className="h-4 w-4" /> Add Employee
+        <Link href="/employees/new" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
+          <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Employee</span>
         </Link>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative">
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[160px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search employees..."
-            className="pl-9 pr-4 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 w-56"
+            className="pl-9 pr-4 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
           />
         </div>
         <select value={dept} onChange={(e) => setDept(e.target.value)} className="px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20">
@@ -77,7 +77,7 @@ export default function Employees() {
           <option value="on_leave">On Leave</option>
           <option value="terminated">Terminated</option>
         </select>
-        <div className="ml-auto flex gap-1 border border-border rounded-lg p-1 bg-white">
+        <div className="flex gap-1 border border-border rounded-lg p-1 bg-white ml-auto shrink-0">
           <button onClick={() => setView("table")} className={`p-1.5 rounded ${view === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}><List className="h-4 w-4" /></button>
           <button onClick={() => setView("grid")} className={`p-1.5 rounded ${view === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}><LayoutGrid className="h-4 w-4" /></button>
         </div>
@@ -92,7 +92,8 @@ export default function Employees() {
         </div>
       ) : view === "table" ? (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead className="border-b border-border bg-muted/30">
               <tr>
                 <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>
@@ -140,6 +141,7 @@ export default function Employees() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

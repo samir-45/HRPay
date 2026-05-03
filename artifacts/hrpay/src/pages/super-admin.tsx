@@ -6,7 +6,7 @@ import {
   Crown, LogOut, RefreshCw, Search, TrendingUp, DollarSign,
   CheckCircle2, XCircle, AlertTriangle, ChevronRight,
   BarChart3, ArrowUpRight, Shield, Bell, Zap, Layers,
-  UserCheck, Ban, Eye, Edit2, Plus, Filter,
+  UserCheck, Ban, Eye, Edit2, Plus, Filter, Menu, X as XClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -376,7 +376,7 @@ function PageSubscriptions({ companies, onRefresh, token }: { companies: Company
         <p className="text-xs text-muted-foreground">Manage billing plans, seats and subscription status for all companies</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {summaryCards.map(({ label, value, color }) => (
           <div key={label} className="bg-white rounded-2xl border border-border p-4 shadow-sm">
             <p className="text-[11px] text-muted-foreground">{label}</p>
@@ -556,7 +556,7 @@ function PageUsers({ companies }: { companies: Company[] }) {
         <p className="text-xs text-muted-foreground">All users across all company tenants on the platform</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "Total Users", value: companies.reduce((s, c) => s + c.userCount, 0) },
           { label: "Total Employees", value: companies.reduce((s, c) => s + c.employeeCount, 0) },
@@ -702,11 +702,12 @@ export default function SuperAdmin({ page = "overview" }: { page?: string }) {
   useEffect(() => { load(); }, [token]);
 
   const activeNav = NAV.find(n => n.href === location) ?? NAV[0];
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "hsl(220 20% 96%)" }}>
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 flex flex-col bg-white border-r border-border">
+      <aside className="hidden md:flex w-56 shrink-0 flex-col bg-white border-r border-border">
         {/* Logo */}
         <div className="flex h-14 items-center gap-2.5 px-4 border-b border-border">
           <div className="flex gap-1">
@@ -754,21 +755,63 @@ export default function SuperAdmin({ page = "overview" }: { page?: string }) {
         </div>
       </aside>
 
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-white flex flex-col shadow-2xl">
+            <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="flex gap-1">
+                  <div className="size-3.5 rounded-full" style={{ background: LIME }} />
+                  <div className="size-3.5 rounded-full bg-foreground" />
+                </div>
+                <span className="text-sm font-bold text-foreground tracking-tight">HRPay</span>
+                <span className="ml-1 text-[9px] font-bold bg-foreground text-white px-1.5 py-0.5 rounded-full uppercase">Admin</span>
+              </div>
+              <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted">
+                <XClose className="h-4 w-4" />
+              </button>
+            </div>
+            <nav className="flex flex-1 flex-col px-2.5 py-3 gap-0.5 overflow-y-auto">
+              {NAV.map(item => {
+                const isActive = location === item.href || (item.href !== "/super-admin" && location.startsWith(item.href));
+                return (
+                  <Link key={item.name} href={item.href} onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-all",
+                      isActive ? "bg-foreground text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}>
+                    <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white" : "text-muted-foreground")} />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      )}
+
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
         <header className="flex h-14 shrink-0 items-center justify-between bg-white border-b border-border px-5">
-          <div>
-            <h1 className="text-sm font-bold text-foreground">{activeNav.name}</h1>
-            <p className="text-[10px] text-muted-foreground">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-            </p>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setMobileOpen(true)} className="md:hidden p-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted">
+              <Menu className="h-4 w-4" />
+            </button>
+            <div>
+              <h1 className="text-sm font-bold text-foreground">{activeNav.name}</h1>
+              <p className="text-[10px] text-muted-foreground hidden sm:block">
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={load} disabled={loading}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 hover:bg-muted transition-all disabled:opacity-50">
               <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </button>
             <div className="flex size-8 items-center justify-center rounded-xl bg-foreground text-white text-[11px] font-bold">SA</div>
           </div>

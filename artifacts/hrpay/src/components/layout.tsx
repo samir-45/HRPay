@@ -7,7 +7,7 @@ import {
   Target, FileText, Settings, Megaphone,
   Receipt, Package, GraduationCap, Network,
   CheckCheck, Info, AlertCircle, PartyPopper,
-  UserCog, LockKeyhole, BarChart3, HelpCircle,
+  UserCog, LockKeyhole, BarChart3, HelpCircle, Menu, X as XClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, apiHeaders } from "@/components/auth-context";
@@ -169,6 +169,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, token } = useAuth();
   const { hasFeature } = usePermissions();
   const { plan, planHasFeature } = useSubscription();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const isAdmin = user?.role === "company_admin";
 
   /* Split nav into accessible and plan-locked items */
@@ -195,30 +196,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const initials = user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() ?? "AD";
   const planLabel = user?.role === "company_admin" ? "Company Admin" : user?.role?.replace(/_/g, " ") ?? "User";
 
-  return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "hsl(220 20% 96%)" }}>
-      {/* Sidebar */}
-      <aside className="hidden md:flex w-56 shrink-0 flex-col bg-white border-r border-border">
-        {/* Logo */}
-        <div className="flex h-14 shrink-0 items-center px-4 gap-2.5 border-b border-border">
-          <div className="flex gap-1">
-            <div className="size-3.5 rounded-full" style={{ background: "hsl(82 80% 48%)" }} />
-            <div className="size-3.5 rounded-full bg-foreground" />
-          </div>
-          <span className="text-sm font-bold tracking-tight text-foreground">HRPay</span>
-          {user?.companyId && (
-            <span className={`ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase ${PLAN_COLORS[plan]}`}>
-              {PLAN_LABELS[plan]}
-            </span>
-          )}
-        </div>
-
-        {/* Nav */}
+  function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
+    return (
+      <>
         <nav className="flex flex-1 flex-col overflow-y-auto px-2.5 py-2 gap-0.5">
           {visibleNav.map(item => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
-              <Link key={item.name} href={item.href}
+              <Link key={item.name} href={item.href} onClick={onNavClick}
                 className={cn(
                   "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-all",
                   isActive ? "bg-foreground text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -228,8 +213,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-
-          {/* Plan-locked items (admin only) */}
           {lockedNav.length > 0 && (
             <>
               <div className="px-2.5 pt-3 pb-1">
@@ -240,7 +223,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 const badge = PLAN_LABELS[reqPlan];
                 const badgeColor = reqPlan === "pro" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600";
                 return (
-                  <Link key={item.name} href={`/upgrade?feature=${item.feature}`}
+                  <Link key={item.name} href={`/upgrade?feature=${item.feature}`} onClick={onNavClick}
                     className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium text-muted-foreground/50 hover:bg-muted/40 transition-all group">
                     <item.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
                     <span className="flex-1 truncate">{item.name}</span>
@@ -250,10 +233,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               })}
             </>
           )}
-
           <div className="flex-1" />
-
-          <Link href="/help"
+          <Link href="/help" onClick={onNavClick}
             className={cn(
               "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-all",
               location === "/help" ? "bg-foreground text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -261,17 +242,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <HelpCircle className={cn("h-3.5 w-3.5 shrink-0", location === "/help" ? "text-white" : "text-muted-foreground")} />
             Help Center
           </Link>
-
-          <button onClick={logout}
+          <button onClick={() => { onNavClick?.(); logout(); }}
             className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all w-full text-left">
             <LogOut className="h-3.5 w-3.5 shrink-0" />
             Logout
           </button>
         </nav>
-
-        {/* Upgrade prompt — show only if not on pro */}
         {plan !== "pro" && (
-          <Link href="/upgrade"
+          <Link href="/upgrade" onClick={onNavClick}
             className="mx-2.5 mb-3 rounded-2xl p-3.5 text-center block hover:opacity-90 transition-all"
             style={{ background: "hsl(82 80% 48%)" }}>
             <div className="mx-auto mb-1.5 flex size-8 items-center justify-center rounded-full bg-black/15">
@@ -288,16 +266,65 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
         )}
+      </>
+    );
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden" style={{ background: "hsl(220 20% 96%)" }}>
+      {/* Mobile overlay drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-white flex flex-col shadow-2xl">
+            <div className="flex h-14 shrink-0 items-center justify-between px-4 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="flex gap-1">
+                  <div className="size-3.5 rounded-full" style={{ background: "hsl(82 80% 48%)" }} />
+                  <div className="size-3.5 rounded-full bg-foreground" />
+                </div>
+                <span className="text-sm font-bold tracking-tight text-foreground">HRPay</span>
+              </div>
+              <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted">
+                <XClose className="h-4 w-4" />
+              </button>
+            </div>
+            <SidebarNav onNavClick={() => setMobileOpen(false)} />
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-56 shrink-0 flex-col bg-white border-r border-border">
+        {/* Logo */}
+        <div className="flex h-14 shrink-0 items-center px-4 gap-2.5 border-b border-border">
+          <div className="flex gap-1">
+            <div className="size-3.5 rounded-full" style={{ background: "hsl(82 80% 48%)" }} />
+            <div className="size-3.5 rounded-full bg-foreground" />
+          </div>
+          <span className="text-sm font-bold tracking-tight text-foreground">HRPay</span>
+          {user?.companyId && (
+            <span className={`ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase ${PLAN_COLORS[plan]}`}>
+              {PLAN_LABELS[plan]}
+            </span>
+          )}
+        </div>
+        <SidebarNav />
       </aside>
 
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center justify-between bg-white border-b border-border px-5">
-          <div>
-            <h1 className="text-sm font-bold text-foreground tracking-tight">{activeItem?.name ?? "HRPay"}</h1>
-            <p className="text-[10px] text-muted-foreground">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-            </p>
+        <header className="flex h-14 shrink-0 items-center justify-between bg-white border-b border-border px-4 md:px-5">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setMobileOpen(true)} className="md:hidden p-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted">
+              <Menu className="h-4 w-4" />
+            </button>
+            <div>
+              <h1 className="text-sm font-bold text-foreground tracking-tight">{activeItem?.name ?? "HRPay"}</h1>
+              <p className="text-[10px] text-muted-foreground hidden sm:block">
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-1.5">
             <button className="flex size-8 items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">

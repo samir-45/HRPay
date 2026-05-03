@@ -58,13 +58,13 @@ export default function Leave() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Leave Management</h2>
           <p className="text-sm text-muted-foreground">{reqList.length} requests · {pending.length} pending</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
-          <Plus className="h-4 w-4" /> New Request
+        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 shrink-0">
+          <Plus className="h-4 w-4" /><span className="hidden sm:inline">New Request</span>
         </button>
       </div>
 
@@ -114,7 +114,8 @@ export default function Leave() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[560px]">
             <thead className="border-b border-border bg-muted/30">
               <tr>
                 <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>
@@ -149,6 +150,7 @@ export default function Leave() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

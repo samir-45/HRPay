@@ -185,7 +185,7 @@ export default function Permissions() {
       </div>
 
       {/* Role summary cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {ROLES.map(r => {
           const count = featureCountForRole(r.key);
           const pct = Math.round((count / ALL_FEATURES.length) * 100);
@@ -225,8 +225,9 @@ export default function Permissions() {
 
       {/* Matrix — grouped by category */}
       <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         {/* Column headers */}
-        <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: "1fr 80px repeat(4, 1fr)" }}>
+        <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: "1fr 80px repeat(4, 1fr)", minWidth: "560px" }}>
           <div className="px-5 py-3.5 text-xs font-semibold text-muted-foreground">Feature / Module</div>
           <div className="px-2 py-3.5 text-xs font-semibold text-muted-foreground text-center border-l border-border">All roles</div>
           {ROLES.map(r => (
@@ -312,6 +313,7 @@ export default function Permissions() {
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Info note */}

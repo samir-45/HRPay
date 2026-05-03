@@ -43,13 +43,13 @@ export default function Payroll() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Payroll Runs</h2>
           <p className="text-sm text-muted-foreground">{allRuns.length} total runs</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-          <Plus className="h-4 w-4" /> New Payroll Run
+        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
+          <Plus className="h-4 w-4" /><span className="hidden sm:inline">New Payroll Run</span>
         </button>
       </div>
 
@@ -61,7 +61,8 @@ export default function Payroll() {
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Draft Runs</h3>
               <div className="bg-white rounded-xl border border-border overflow-hidden">
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[480px]">
                   <thead className="border-b border-border bg-muted/30">
                     <tr>
                       <th className="text-left px-5 py-3 font-medium text-muted-foreground">Run Name</th>
@@ -87,6 +88,7 @@ export default function Payroll() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           )}
@@ -95,7 +97,8 @@ export default function Payroll() {
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Completed Runs</h3>
               <div className="bg-white rounded-xl border border-border overflow-hidden">
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead className="border-b border-border bg-muted/30">
                     <tr>
                       <th className="text-left px-5 py-3 font-medium text-muted-foreground">Run Name</th>
@@ -123,6 +126,7 @@ export default function Payroll() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           )}

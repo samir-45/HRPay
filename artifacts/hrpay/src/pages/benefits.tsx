@@ -55,12 +55,12 @@ export default function Benefits() {
           <h2 className="text-lg font-semibold">Benefits</h2>
           <p className="text-sm text-muted-foreground">{planList.length} plans · {enrollList.filter(e => e.isActive).length} active enrollments</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => setShowEnrollModal(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50">
-            <Plus className="h-4 w-4" /> Enroll Employee
+            <Plus className="h-4 w-4" /><span className="hidden sm:inline">Enroll Employee</span>
           </button>
           <button onClick={() => setShowPlanModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
-            <Plus className="h-4 w-4" /> Add Plan
+            <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Plan</span>
           </button>
         </div>
       </div>
@@ -104,7 +104,8 @@ export default function Benefits() {
           <div className="flex items-center justify-center py-8 text-muted-foreground text-sm bg-white rounded-xl border border-border">No enrollments yet.</div>
         ) : (
           <div className="bg-white rounded-xl border border-border overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[420px]">
               <thead className="border-b border-border bg-muted/30">
                 <tr>
                   <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>
@@ -128,6 +129,7 @@ export default function Benefits() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
