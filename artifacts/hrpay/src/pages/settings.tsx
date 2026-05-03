@@ -389,8 +389,14 @@ export default function Settings() {
 
   const save = useMutation({
     mutationFn: () => fetch(`${API}/settings`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify(form) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["settings"] }); setSaved(true); setTimeout(() => setSaved(false), 2000); setForm({}); },
-    onError: () => toast.error("Failed to save settings", { description: "Please check your input and try again." }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["settings"] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      setForm({});
+      toast.success("Settings saved", { description: "Your company settings have been updated successfully." });
+    },
+    onError: (err: Error) => toast.error("Failed to save settings", { description: err.message || "Please check your input and try again." }),
   });
 
   return (
