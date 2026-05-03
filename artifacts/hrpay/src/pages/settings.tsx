@@ -443,7 +443,7 @@ export default function Settings() {
               <h3 className="font-bold text-foreground mb-4">Payroll Configuration</h3>
               <div className="grid grid-cols-2 gap-4">
                 <SelectField label="Pay Period" value={currentSettings.payPeriod ?? "bi-weekly"} onChange={set("payPeriod")} options={["weekly", "bi-weekly", "monthly"]} />
-                <SelectField label="Currency"   value={currentSettings.currency  ?? "USD"}       onChange={set("currency")}   options={["USD", "EUR", "GBP", "CAD", "AUD", "INR"]} />
+                <SelectField label="Currency"   value={currentSettings.currency  ?? "USD"}       onChange={set("currency")}   options={["USD", "EUR", "GBP", "CAD", "AUD", "INR", "SGD", "AED", "JPY", "CNY", "NGN", "ZAR", "BRL", "MXN", "KRW", "CHF", "SEK", "NOK", "DKK"]} />
                 <div><label className="text-sm font-medium text-foreground block mb-1.5">Working Hours / Day</label><input type="number" min="1" max="24" value={currentSettings.workingHoursPerDay ?? 8} onChange={e => set("workingHoursPerDay")(e.target.value)} className="w-full rounded-xl border border-border bg-muted/30 px-4 py-2.5 text-sm focus:outline-none" /></div>
                 <div><label className="text-sm font-medium text-foreground block mb-1.5">Working Days / Week</label><input type="number" min="1" max="7"  value={currentSettings.workingDaysPerWeek ?? 5} onChange={e => set("workingDaysPerWeek")(e.target.value)} className="w-full rounded-xl border border-border bg-muted/30 px-4 py-2.5 text-sm focus:outline-none" /></div>
               </div>
@@ -456,9 +456,9 @@ export default function Settings() {
             <div className="space-y-4">
               <h3 className="font-bold text-foreground mb-4">Locale & Regional</h3>
               <div className="grid grid-cols-2 gap-4">
-                <SelectField label="Timezone"    value={currentSettings.timezone   ?? "America/Los_Angeles"} onChange={set("timezone")}   options={["America/Los_Angeles", "America/New_York", "America/Chicago", "Europe/London", "Europe/Paris", "Asia/Kolkata", "Asia/Singapore", "UTC"]} />
-                <SelectField label="Date Format" value={currentSettings.dateFormat ?? "MM/DD/YYYY"}          onChange={set("dateFormat")} options={["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]} />
-                <SelectField label="Currency"    value={currentSettings.currency   ?? "USD"}                 onChange={set("currency")}   options={["USD", "EUR", "GBP", "CAD", "AUD", "INR", "SGD"]} />
+                <SelectField label="Timezone"    value={currentSettings.timezone   ?? "UTC"} onChange={set("timezone")}   options={["UTC", "America/Los_Angeles", "America/New_York", "America/Chicago", "America/Toronto", "America/Sao_Paulo", "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Amsterdam", "Africa/Lagos", "Africa/Johannesburg", "Asia/Dubai", "Asia/Kolkata", "Asia/Singapore", "Asia/Shanghai", "Asia/Tokyo", "Australia/Sydney"]} />
+                <SelectField label="Date Format" value={currentSettings.dateFormat ?? "MM/DD/YYYY"}          onChange={set("dateFormat")} options={["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD", "DD-MM-YYYY", "DD.MM.YYYY"]} />
+                <SelectField label="Currency"    value={currentSettings.currency   ?? "USD"}                 onChange={set("currency")}   options={["USD", "EUR", "GBP", "CAD", "AUD", "INR", "SGD", "AED", "JPY", "CNY", "NGN", "ZAR", "BRL", "MXN", "KRW", "CHF", "SEK", "NOK", "DKK"]} />
               </div>
             </div>
           ) : tab === "security" ? (

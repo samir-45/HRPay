@@ -7,12 +7,20 @@ import {
   CreateOnboardingTaskBody,
   CompleteOnboardingTaskParams,
 } from "@workspace/api-zod";
+import { getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
 router.get("/onboarding/tasks", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { employeeId } = ListOnboardingTasksQueryParams.parse(req.query);
-  const conditions = employeeId ? [eq(onboardingTasksTable.employeeId, employeeId)] : [];
+  const cid = user.companyId;
+
+  const baseConditions = [];
+  if (employeeId) baseConditions.push(eq(onboardingTasksTable.employeeId, employeeId));
+  if (cid) baseConditions.push(eq(employeesTable.companyId, cid));
 
   const tasks = await db
     .select({
@@ -32,7 +40,7 @@ router.get("/onboarding/tasks", async (req, res) => {
     })
     .from(onboardingTasksTable)
     .leftJoin(employeesTable, eq(onboardingTasksTable.employeeId, employeesTable.id))
-    .where(conditions.length > 0 ? conditions[0] : undefined)
+    .where(baseConditions.length > 0 ? and(...baseConditions) : undefined)
     .orderBy(onboardingTasksTable.createdAt);
 
   res.json(
@@ -58,6 +66,11 @@ router.post("/onboarding/tasks/:id/complete", async (req, res) => {
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
   res.json(updated);
+});
+
+router.delete("/onboarding/tasks/:id", async (req, res) => {
+  await db.delete(onboardingTasksTable).where(eq(onboardingTasksTable.id, Number(req.params.id)));
+  res.status(204).send();
 });
 
 export default router;

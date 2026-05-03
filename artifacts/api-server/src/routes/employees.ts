@@ -11,7 +11,7 @@ import {
   DeleteEmployeeParams,
 } from "@workspace/api-zod";
 import { notify } from "../lib/notify";
-import { getRequestUser } from "../lib/auth-helpers";
+import { getRequestUser, requireCompanyUser } from "../lib/auth-helpers";
 
 const router = Router();
 
@@ -20,10 +20,14 @@ function generateEmployeeCode(id: number): string {
 }
 
 router.get("/employees", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const query = ListEmployeesQueryParams.parse(req.query);
   const { department, status, search, page, limit } = query;
 
   const conditions = [];
+  if (user.companyId) conditions.push(eq(employeesTable.companyId, user.companyId));
   if (status) conditions.push(eq(employeesTable.status, status));
 
   let employees = await db
@@ -81,6 +85,9 @@ router.get("/employees", async (req, res) => {
 });
 
 router.post("/employees", async (req, res) => {
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
   const body = CreateEmployeeBody.parse(req.body);
 
   const maxRow = await db
@@ -91,7 +98,7 @@ router.post("/employees", async (req, res) => {
 
   const [employee] = await db
     .insert(employeesTable)
-    .values({ ...body, employeeCode })
+    .values({ ...body, companyId: user.companyId, employeeCode })
     .returning();
 
   if (employee.employeeCode == null) {
@@ -177,7 +184,13 @@ router.patch("/employees/me", async (req, res) => {
 /* ── Admin CRUD ── */
 
 router.get("/employees/:id", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { id } = GetEmployeeParams.parse({ id: Number(req.params.id) });
+  const conditions = [eq(employeesTable.id, id)];
+  if (user.companyId) conditions.push(eq(employeesTable.companyId, user.companyId));
+
   const [row] = await db
     .select({
       id: employeesTable.id,
@@ -207,26 +220,35 @@ router.get("/employees/:id", async (req, res) => {
     })
     .from(employeesTable)
     .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
-    .where(eq(employeesTable.id, id));
+    .where(and(...conditions));
+
   if (!row) return res.status(404).json({ error: "Not found" });
   res.json(row);
 });
 
 router.put("/employees/:id", async (req, res) => {
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
   const { id } = UpdateEmployeeParams.parse({ id: Number(req.params.id) });
   const body = UpdateEmployeeBody.parse(req.body);
   const [updated] = await db
     .update(employeesTable)
     .set({ ...body, updatedAt: new Date() })
-    .where(eq(employeesTable.id, id))
+    .where(and(eq(employeesTable.id, id), eq(employeesTable.companyId, user.companyId)))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
   res.json(updated);
 });
 
 router.delete("/employees/:id", async (req, res) => {
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
   const { id } = DeleteEmployeeParams.parse({ id: Number(req.params.id) });
-  await db.delete(employeesTable).where(eq(employeesTable.id, id));
+  await db
+    .delete(employeesTable)
+    .where(and(eq(employeesTable.id, id), eq(employeesTable.companyId, user.companyId)));
   res.status(204).send();
 });
 

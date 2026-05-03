@@ -10,16 +10,22 @@ import {
   ListLeaveBalancesQueryParams,
 } from "@workspace/api-zod";
 import { notify } from "../lib/notify";
-import { requireNonEmployee } from "../lib/auth-helpers";
+import { requireNonEmployee, getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
 router.get("/leave/requests", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { employeeId, status, type } = ListLeaveRequestsQueryParams.parse(req.query);
   const conditions = [];
   if (employeeId) conditions.push(eq(leaveRequestsTable.employeeId, employeeId));
   if (status) conditions.push(eq(leaveRequestsTable.status, status));
   if (type) conditions.push(eq(leaveRequestsTable.type, type));
+
+  const cid = user.companyId;
+  if (cid) conditions.push(eq(employeesTable.companyId, cid));
 
   const requests = await db
     .select({
@@ -60,17 +66,12 @@ router.post("/leave/requests", async (req, res) => {
 
   const [request] = await db
     .insert(leaveRequestsTable)
-    .values({ ...body, days: days.toString() })
+    .values({ ...body, days: String(days) })
     .returning();
 
-  const [emp] = await db
-    .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
-    .from(employeesTable)
-    .where(eq(employeesTable.id, body.employeeId));
-  const empName = emp ? `${emp.firstName} ${emp.lastName}` : "An employee";
   await notify(
     "New Leave Request",
-    `${empName} submitted a ${body.type} leave request for ${days} day${days !== 1 ? "s" : ""} (${body.startDate} – ${body.endDate}).`,
+    `A new ${body.type} leave request has been submitted for ${days} day(s) starting ${body.startDate}.`,
     "info"
   );
 
@@ -79,76 +80,64 @@ router.post("/leave/requests", async (req, res) => {
 
 router.post("/leave/requests/:id/approve", async (req, res) => {
   if (!requireNonEmployee(req, res)) return;
+
   const { id } = ApproveLeaveRequestParams.parse({ id: Number(req.params.id) });
+  const { reviewedBy } = req.body as { reviewedBy?: string };
   const [updated] = await db
     .update(leaveRequestsTable)
-    .set({ status: "approved", reviewedBy: "HR Admin", reviewedAt: new Date() })
+    .set({ status: "approved", reviewedBy: reviewedBy ?? null, reviewedAt: new Date() })
     .where(eq(leaveRequestsTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
 
-  const [emp] = await db
-    .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
-    .from(employeesTable)
-    .where(eq(employeesTable.id, updated.employeeId));
-  const empName = emp ? `${emp.firstName} ${emp.lastName}` : "Employee";
-  await notify(
-    "Leave Request Approved",
-    `${empName}'s ${updated.type} leave request (${updated.startDate} – ${updated.endDate}) has been approved.`,
-    "success"
-  );
-
-  res.json({ ...updated, days: Number(updated.days) });
+  await notify("Leave Approved", `Leave request #${id} has been approved.`, "success");
+  res.json({ ...updated, days: updated.days ? Number(updated.days) : null });
 });
 
 router.post("/leave/requests/:id/reject", async (req, res) => {
   if (!requireNonEmployee(req, res)) return;
+
   const { id } = RejectLeaveRequestParams.parse({ id: Number(req.params.id) });
+  const { reviewedBy } = req.body as { reviewedBy?: string };
   const [updated] = await db
     .update(leaveRequestsTable)
-    .set({ status: "rejected", reviewedBy: "HR Admin", reviewedAt: new Date() })
+    .set({ status: "rejected", reviewedBy: reviewedBy ?? null, reviewedAt: new Date() })
     .where(eq(leaveRequestsTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
 
-  const [emp] = await db
-    .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
-    .from(employeesTable)
-    .where(eq(employeesTable.id, updated.employeeId));
-  const empName = emp ? `${emp.firstName} ${emp.lastName}` : "Employee";
-  await notify(
-    "Leave Request Rejected",
-    `${empName}'s ${updated.type} leave request (${updated.startDate} – ${updated.endDate}) has been rejected.`,
-    "warning"
-  );
-
-  res.json({ ...updated, days: Number(updated.days) });
+  await notify("Leave Rejected", `Leave request #${id} has been rejected.`, "warning");
+  res.json({ ...updated, days: updated.days ? Number(updated.days) : null });
 });
 
 router.get("/leave/balances", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { employeeId } = ListLeaveBalancesQueryParams.parse(req.query);
-  const conditions = employeeId ? [eq(leaveBalancesTable.employeeId, employeeId)] : [];
+  const conditions = [];
+  if (employeeId) conditions.push(eq(leaveBalancesTable.employeeId, employeeId));
+
+  /* If companyId is set, ensure we only return balances for our company's employees */
+  const cid = user.companyId;
+  if (cid && !employeeId) {
+    const companyEmpIds = await db
+      .select({ id: employeesTable.id })
+      .from(employeesTable)
+      .where(eq(employeesTable.companyId, cid));
+    const ids = companyEmpIds.map((e) => e.id);
+    if (ids.length === 0) { res.json([]); return; }
+  }
 
   const balances = await db
-    .select({
-      id: leaveBalancesTable.id,
-      employeeId: leaveBalancesTable.employeeId,
-      employeeName: employeesTable.firstName,
-      employeeLastName: employeesTable.lastName,
-      type: leaveBalancesTable.type,
-      allocated: leaveBalancesTable.allocated,
-      used: leaveBalancesTable.used,
-      pending: leaveBalancesTable.pending,
-      year: leaveBalancesTable.year,
-    })
+    .select()
     .from(leaveBalancesTable)
-    .leftJoin(employeesTable, eq(leaveBalancesTable.employeeId, employeesTable.id))
-    .where(conditions.length > 0 ? conditions[0] : undefined);
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(leaveBalancesTable.type);
 
   res.json(
     balances.map((b) => ({
       ...b,
-      employeeName: `${b.employeeName ?? ""} ${b.employeeLastName ?? ""}`.trim(),
       allocated: Number(b.allocated ?? 0),
       used: Number(b.used ?? 0),
       pending: Number(b.pending ?? 0),

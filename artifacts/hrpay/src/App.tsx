@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from "@/components/auth-context";
 import { PermissionsProvider, usePermissions } from "@/components/permissions-context";
 import type { FeatureKey } from "@/components/permissions-context";
 import { SubscriptionProvider } from "@/components/subscription-context";
+import { CompanySettingsProvider } from "@/components/company-settings-context";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { AIAssistant } from "@/components/ai-assistant";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -67,21 +69,16 @@ function ProtectedRoute({
   const { user, isLoading: authLoading } = useAuth();
   const { hasFeature, isLoading: permsLoading } = usePermissions();
 
-  // Wait for both auth and permissions to finish loading
   if (authLoading || permsLoading) return <LoadingScreen />;
-
-  // Must be logged in
   if (!user) return <Redirect to="/login" />;
-
-  // Role gate (hard-coded role restrictions like company_admin-only pages)
   if (allowedRoles && !allowedRoles.includes(user.role)) return <Redirect to="/dashboard" />;
-
-  // Feature gate: non-admin roles are checked against company permission matrix
   if (feature && !hasFeature(feature)) return <Redirect to="/dashboard" />;
 
   return (
     <AppLayout>
-      <Component />
+      <ErrorBoundary>
+        <Component />
+      </ErrorBoundary>
       <AIAssistant />
     </AppLayout>
   );
@@ -117,11 +114,9 @@ function Router() {
       <Route path="/settings"    component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/help"        component={() => <ProtectedRoute component={Help} />} />
 
-      {/* Admin-only — role gate, no feature gate */}
       <Route path="/permissions" component={() => <ProtectedRoute component={Permissions} allowedRoles={["company_admin"]} />} />
       <Route path="/team"        component={() => <ProtectedRoute component={TeamManagement} allowedRoles={["company_admin", "ceoo", "super_admin", "manager"]} feature="team" />} />
 
-      {/* Feature-gated routes — redirect to /dashboard if role doesn't have feature */}
       <Route path="/employees/new"  component={() => <ProtectedRoute component={EmployeeNew}     feature="employees" />} />
       <Route path="/employees/:id"  component={() => <ProtectedRoute component={EmployeeProfile} feature="employees" />} />
       <Route path="/employees"      component={() => <ProtectedRoute component={Employees}       feature="employees" />} />
@@ -148,20 +143,24 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <PermissionsProvider>
-              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                <Router />
-              </WouterRouter>
-            </PermissionsProvider>
-          </SubscriptionProvider>
-        </AuthProvider>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <PermissionsProvider>
+                <CompanySettingsProvider>
+                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                    <Router />
+                  </WouterRouter>
+                </CompanySettingsProvider>
+              </PermissionsProvider>
+            </SubscriptionProvider>
+          </AuthProvider>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

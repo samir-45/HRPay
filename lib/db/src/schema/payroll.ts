@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 export const payrollRunsTable = pgTable("payroll_runs", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id"),
   name: text("name").notNull(),
   periodStart: date("period_start").notNull(),
   periodEnd: date("period_end").notNull(),

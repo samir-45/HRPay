@@ -1,12 +1,16 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { expenseClaimsTable, employeesTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
-import { requireNonEmployee } from "../lib/auth-helpers";
+import { eq, desc, and } from "drizzle-orm";
+import { requireNonEmployee, getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
-router.get("/expenses", async (_req, res) => {
+router.get("/expenses", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
   const claims = await db
     .select({
       id: expenseClaimsTable.id,
@@ -28,24 +32,41 @@ router.get("/expenses", async (_req, res) => {
     })
     .from(expenseClaimsTable)
     .leftJoin(employeesTable, eq(expenseClaimsTable.employeeId, employeesTable.id))
+    .where(cid ? eq(employeesTable.companyId, cid) : undefined)
     .orderBy(desc(expenseClaimsTable.createdAt));
+
   res.json(claims);
 });
 
 router.get("/expenses/:id", async (req, res) => {
-  const [claim] = await db
-    .select()
-    .from(expenseClaimsTable)
-    .where(eq(expenseClaimsTable.id, Number(req.params.id)));
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
+  const id = Number(req.params.id);
+
+  const [claim] = cid
+    ? await db
+        .select({ claim: expenseClaimsTable })
+        .from(expenseClaimsTable)
+        .leftJoin(employeesTable, eq(expenseClaimsTable.employeeId, employeesTable.id))
+        .where(and(eq(expenseClaimsTable.id, id), eq(employeesTable.companyId, cid)))
+    : await db.select({ claim: expenseClaimsTable }).from(expenseClaimsTable).where(eq(expenseClaimsTable.id, id));
+
   if (!claim) return res.status(404).json({ error: "Not found" });
-  res.json(claim);
+  res.json(claim.claim ?? claim);
 });
 
 router.post("/expenses", async (req, res) => {
-  const { employeeId, title, category, amount, currency, expenseDate, description, receiptUrl } = req.body;
+  const { employeeId, title, category, amount, currency, expenseDate, description, receiptUrl } = req.body as {
+    employeeId?: number | string; title?: string; category?: string; amount?: number | string;
+    currency?: string; expenseDate?: string; description?: string; receiptUrl?: string;
+  };
+
   if (!employeeId || !title || !amount || !expenseDate) {
     return res.status(400).json({ error: "employeeId, title, amount, expenseDate are required" });
   }
+
   const [claim] = await db.insert(expenseClaimsTable).values({
     employeeId: Number(employeeId), title, category: category ?? "other",
     amount: String(amount), currency: currency ?? "USD",
@@ -56,21 +77,20 @@ router.post("/expenses", async (req, res) => {
 
 router.patch("/expenses/:id/status", async (req, res) => {
   if (!requireNonEmployee(req, res)) return;
-  const { status, reviewNotes, reviewedBy } = req.body;
-  if (!["approved", "rejected", "pending"].includes(status)) {
-    return res.status(400).json({ error: "status must be approved, rejected, or pending" });
+
+  const { status, reviewNotes, reviewedBy } = req.body as {
+    status?: string; reviewNotes?: string; reviewedBy?: string;
+  };
+  if (!["approved", "rejected", "pending"].includes(status ?? "")) {
+    return res.status(400).json({ error: "Invalid status" });
   }
-  const [claim] = await db.update(expenseClaimsTable)
-    .set({ status, reviewNotes, reviewedBy, reviewedAt: new Date() })
+  const [updated] = await db
+    .update(expenseClaimsTable)
+    .set({ status: status!, reviewNotes: reviewNotes ?? null, reviewedBy: reviewedBy ?? null, reviewedAt: new Date() })
     .where(eq(expenseClaimsTable.id, Number(req.params.id)))
     .returning();
-  res.json(claim);
-});
-
-router.delete("/expenses/:id", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
-  await db.delete(expenseClaimsTable).where(eq(expenseClaimsTable.id, Number(req.params.id)));
-  res.status(204).end();
+  if (!updated) return res.status(404).json({ error: "Not found" });
+  res.json(updated);
 });
 
 export default router;

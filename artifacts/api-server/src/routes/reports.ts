@@ -6,12 +6,18 @@ import {
   leaveRequestsTable,
   timeEntriesTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
+import { getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
-/* Headcount report */
-router.get("/reports/headcount", async (_req, res) => {
+router.get("/reports/headcount", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
+  const conditions = cid ? [eq(employeesTable.companyId, cid)] : [];
+
   const employees = await db
     .select({
       id: employeesTable.id,
@@ -27,6 +33,7 @@ router.get("/reports/headcount", async (_req, res) => {
     })
     .from(employeesTable)
     .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(departmentsTable.name, employeesTable.lastName);
 
   const total = employees.length;
@@ -44,9 +51,13 @@ router.get("/reports/headcount", async (_req, res) => {
   res.json({ total, byStatus, byType, byDepartment: byDept, employees });
 });
 
-/* Payroll summary report */
 router.get("/reports/payroll-summary", async (req, res) => {
-  const { from, to } = req.query as { from?: string; to?: string };
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
+  const conditions = cid ? [eq(payrollRunsTable.companyId, cid)] : [];
+
   const runs = await db
     .select({
       id: payrollRunsTable.id,
@@ -62,6 +73,7 @@ router.get("/reports/payroll-summary", async (req, res) => {
       processedAt: payrollRunsTable.processedAt,
     })
     .from(payrollRunsTable)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(payrollRunsTable.periodStart));
 
   const totals = runs.reduce((acc, r) => ({
@@ -73,9 +85,12 @@ router.get("/reports/payroll-summary", async (req, res) => {
   res.json({ runs, totals });
 });
 
-/* Leave report */
-router.get("/reports/leave", async (_req, res) => {
-  const requests = await db
+router.get("/reports/leave", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
+  const query = db
     .select({
       id: leaveRequestsTable.id,
       employeeId: leaveRequestsTable.employeeId,
@@ -91,7 +106,10 @@ router.get("/reports/leave", async (_req, res) => {
     .from(leaveRequestsTable)
     .leftJoin(employeesTable, eq(leaveRequestsTable.employeeId, employeesTable.id))
     .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
+    .where(cid ? eq(employeesTable.companyId, cid) : undefined)
     .orderBy(desc(leaveRequestsTable.createdAt));
+
+  const requests = await query;
 
   const byType = requests.reduce<Record<string, number>>((acc, r) => {
     acc[r.type] = (acc[r.type] ?? 0) + Number(r.days ?? 1); return acc;
@@ -103,8 +121,11 @@ router.get("/reports/leave", async (_req, res) => {
   res.json({ requests, byType, byStatus, total: requests.length });
 });
 
-/* Attendance / time report */
-router.get("/reports/attendance", async (_req, res) => {
+router.get("/reports/attendance", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
   const entries = await db
     .select({
       id: timeEntriesTable.id,
@@ -120,6 +141,7 @@ router.get("/reports/attendance", async (_req, res) => {
     .from(timeEntriesTable)
     .leftJoin(employeesTable, eq(timeEntriesTable.employeeId, employeesTable.id))
     .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
+    .where(cid ? eq(employeesTable.companyId, cid) : undefined)
     .orderBy(desc(timeEntriesTable.date))
     .limit(500);
 

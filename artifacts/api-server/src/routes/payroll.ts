@@ -14,32 +14,47 @@ import {
   ListPayStubsQueryParams,
 } from "@workspace/api-zod";
 import { notify } from "../lib/notify";
+import { requireCompanyUser, getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
+function mapRun(r: typeof payrollRunsTable.$inferSelect) {
+  return {
+    ...r,
+    totalGrossPay: r.totalGrossPay ? Number(r.totalGrossPay) : 0,
+    totalNetPay: r.totalNetPay ? Number(r.totalNetPay) : 0,
+    totalTaxes: r.totalTaxes ? Number(r.totalTaxes) : 0,
+    totalDeductions: r.totalDeductions ? Number(r.totalDeductions) : 0,
+  };
+}
+
 router.get("/payroll/runs", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { status } = ListPayrollRunsQueryParams.parse(req.query);
   const conditions = [];
+  if (user.companyId) conditions.push(eq(payrollRunsTable.companyId, user.companyId));
   if (status) conditions.push(eq(payrollRunsTable.status, status));
+
   const runs = await db
     .select()
     .from(payrollRunsTable)
-    .where(conditions.length > 0 ? conditions[0] : undefined)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(payrollRunsTable.createdAt);
-  res.json(
-    runs.map((r) => ({
-      ...r,
-      totalGrossPay: r.totalGrossPay ? Number(r.totalGrossPay) : 0,
-      totalNetPay: r.totalNetPay ? Number(r.totalNetPay) : 0,
-      totalTaxes: r.totalTaxes ? Number(r.totalTaxes) : 0,
-      totalDeductions: r.totalDeductions ? Number(r.totalDeductions) : 0,
-    }))
-  );
+
+  res.json(runs.map(mapRun));
 });
 
 router.post("/payroll/runs", async (req, res) => {
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
   const body = CreatePayrollRunBody.parse(req.body);
-  const [run] = await db.insert(payrollRunsTable).values(body).returning();
+  const [run] = await db
+    .insert(payrollRunsTable)
+    .values({ ...body, companyId: user.companyId })
+    .returning();
 
   await notify(
     "Payroll Run Created",
@@ -47,156 +62,129 @@ router.post("/payroll/runs", async (req, res) => {
     "info"
   );
 
-  res.status(201).json({
-    ...run,
-    totalGrossPay: Number(run.totalGrossPay ?? 0),
-    totalNetPay: Number(run.totalNetPay ?? 0),
-    totalTaxes: Number(run.totalTaxes ?? 0),
-    totalDeductions: Number(run.totalDeductions ?? 0),
-  });
+  res.status(201).json(mapRun(run));
 });
 
 router.get("/payroll/runs/:id", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { id } = GetPayrollRunParams.parse({ id: Number(req.params.id) });
-  const [run] = await db.select().from(payrollRunsTable).where(eq(payrollRunsTable.id, id));
+  const conditions = [eq(payrollRunsTable.id, id)];
+  if (user.companyId) conditions.push(eq(payrollRunsTable.companyId, user.companyId));
+
+  const [run] = await db.select().from(payrollRunsTable).where(and(...conditions));
   if (!run) return res.status(404).json({ error: "Not found" });
-  res.json({
-    ...run,
-    totalGrossPay: Number(run.totalGrossPay ?? 0),
-    totalNetPay: Number(run.totalNetPay ?? 0),
-    totalTaxes: Number(run.totalTaxes ?? 0),
-    totalDeductions: Number(run.totalDeductions ?? 0),
-  });
+  res.json(mapRun(run));
 });
 
 router.post("/payroll/runs/:id/process", async (req, res) => {
-  const { id } = ProcessPayrollRunParams.parse({ id: Number(req.params.id) });
-  const [run] = await db.select().from(payrollRunsTable).where(eq(payrollRunsTable.id, id));
-  if (!run) return res.status(404).json({ error: "Not found" });
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
 
-  const employees = await db
-    .select()
-    .from(employeesTable)
-    .where(eq(employeesTable.status, "active"));
+  const { id } = ProcessPayrollRunParams.parse({ id: Number(req.params.id) });
+  const conditions = [eq(payrollRunsTable.id, id)];
+  if (user.companyId) conditions.push(eq(payrollRunsTable.companyId, user.companyId));
+
+  const [run] = await db.select().from(payrollRunsTable).where(and(...conditions));
+  if (!run) return res.status(404).json({ error: "Not found" });
+  if (run.status !== "draft") return res.status(400).json({ error: "Payroll run already processed" });
+
+  const empConditions = [eq(employeesTable.status, "active")];
+  if (user.companyId) empConditions.push(eq(employeesTable.companyId, user.companyId));
+  const employees = await db.select().from(employeesTable).where(and(...empConditions));
 
   let totalGross = 0;
   let totalNet = 0;
   let totalTaxes = 0;
-
   const stubs = [];
+
   for (const emp of employees) {
-    const salary = emp.salary ? Number(emp.salary) : 50000;
-    const salaryType = emp.salaryType ?? "annual";
-    const grossPay = salaryType === "hourly" ? salary * 80 : salary / 26;
-    const federalTax = grossPay * 0.22;
-    const stateTax = grossPay * 0.05;
-    const socialSecurity = grossPay * 0.062;
-    const medicare = grossPay * 0.0145;
-    const healthInsurance = 200;
-    const retirement = grossPay * 0.04;
-    const totalDeductions = federalTax + stateTax + socialSecurity + medicare + healthInsurance + retirement;
-    const netPay = grossPay - totalDeductions;
+    const annualSalary = Number(emp.salary ?? 0);
+    const payPeriods = emp.salaryType === "hourly" ? 1 : 26;
+    const gross = annualSalary / payPeriods;
+    const federal = gross * 0.22;
+    const ss = gross * 0.062;
+    const medicare = gross * 0.0145;
+    const state = gross * 0.05;
+    const health = 150;
+    const retirement = gross * 0.03;
+    const deductions = health + retirement;
+    const taxes = federal + ss + medicare + state;
+    const net = gross - taxes - deductions;
+
+    totalGross += gross;
+    totalNet += net;
+    totalTaxes += taxes;
 
     stubs.push({
       payrollRunId: id,
       employeeId: emp.id,
-      grossPay: grossPay.toFixed(2),
-      netPay: Math.max(netPay, 0).toFixed(2),
-      federalTax: federalTax.toFixed(2),
-      stateTax: stateTax.toFixed(2),
-      socialSecurity: socialSecurity.toFixed(2),
+      grossPay: gross.toFixed(2),
+      netPay: net.toFixed(2),
+      federalTax: federal.toFixed(2),
+      stateTax: state.toFixed(2),
+      socialSecurity: ss.toFixed(2),
       medicare: medicare.toFixed(2),
-      healthInsurance: healthInsurance.toFixed(2),
+      healthInsurance: health.toFixed(2),
       retirement: retirement.toFixed(2),
-      hoursWorked: "80",
     });
-
-    totalGross += grossPay;
-    totalTaxes += federalTax + stateTax + socialSecurity + medicare;
-    totalNet += Math.max(netPay, 0);
   }
 
   if (stubs.length > 0) {
     await db.insert(payStubsTable).values(stubs);
   }
 
-  const [updated] = await db
+  const [processed] = await db
     .update(payrollRunsTable)
     .set({
       status: "completed",
-      processedAt: new Date(),
       totalGrossPay: totalGross.toFixed(2),
       totalNetPay: totalNet.toFixed(2),
       totalTaxes: totalTaxes.toFixed(2),
-      totalDeductions: (totalGross - totalNet).toFixed(2),
+      totalDeductions: (totalGross - totalNet - totalTaxes).toFixed(2),
       employeeCount: employees.length,
+      processedAt: new Date(),
     })
-    .where(eq(payrollRunsTable.id, id))
+    .where(and(...conditions))
     .returning();
 
-  const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
   await notify(
-    "Payroll Run Completed",
-    `"${run.name}" has been processed for ${employees.length} employee${employees.length !== 1 ? "s" : ""}. Net pay: ${fmt(totalNet)}, Gross: ${fmt(totalGross)}.`,
+    "Payroll Processed",
+    `Payroll run "${run.name}" has been processed for ${employees.length} employees. Net pay: $${totalNet.toFixed(2)}.`,
     "success"
   );
 
-  res.json({
-    ...updated,
-    totalGrossPay: Number(updated.totalGrossPay ?? 0),
-    totalNetPay: Number(updated.totalNetPay ?? 0),
-    totalTaxes: Number(updated.totalTaxes ?? 0),
-    totalDeductions: Number(updated.totalDeductions ?? 0),
-  });
+  res.json(mapRun(processed));
 });
 
 router.get("/payroll/stubs", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { employeeId, payrollRunId } = ListPayStubsQueryParams.parse(req.query);
+  const conditions = [];
+  if (employeeId) conditions.push(eq(payStubsTable.employeeId, employeeId));
+  if (payrollRunId) conditions.push(eq(payStubsTable.payrollRunId, payrollRunId));
 
   const stubs = await db
-    .select({
-      id: payStubsTable.id,
-      payrollRunId: payStubsTable.payrollRunId,
-      employeeId: payStubsTable.employeeId,
-      employeeName: employeesTable.firstName,
-      employeeLastName: employeesTable.lastName,
-      grossPay: payStubsTable.grossPay,
-      netPay: payStubsTable.netPay,
-      federalTax: payStubsTable.federalTax,
-      stateTax: payStubsTable.stateTax,
-      socialSecurity: payStubsTable.socialSecurity,
-      medicare: payStubsTable.medicare,
-      healthInsurance: payStubsTable.healthInsurance,
-      retirement: payStubsTable.retirement,
-      hoursWorked: payStubsTable.hoursWorked,
-      periodStart: payrollRunsTable.periodStart,
-      periodEnd: payrollRunsTable.periodEnd,
-      payDate: payrollRunsTable.payDate,
-      createdAt: payStubsTable.createdAt,
-    })
+    .select()
     .from(payStubsTable)
-    .leftJoin(employeesTable, eq(payStubsTable.employeeId, employeesTable.id))
-    .leftJoin(payrollRunsTable, eq(payStubsTable.payrollRunId, payrollRunsTable.id))
-    .where(
-      and(
-        employeeId ? eq(payStubsTable.employeeId, employeeId) : undefined,
-        payrollRunId ? eq(payStubsTable.payrollRunId, payrollRunId) : undefined
-      )
-    );
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(payStubsTable.createdAt);
 
   res.json(
     stubs.map((s) => ({
       ...s,
-      employeeName: `${s.employeeName ?? ""} ${s.employeeLastName ?? ""}`.trim(),
-      grossPay: Number(s.grossPay ?? 0),
-      netPay: Number(s.netPay ?? 0),
+      grossPay: Number(s.grossPay),
+      netPay: Number(s.netPay),
       federalTax: Number(s.federalTax ?? 0),
       stateTax: Number(s.stateTax ?? 0),
       socialSecurity: Number(s.socialSecurity ?? 0),
       medicare: Number(s.medicare ?? 0),
       healthInsurance: Number(s.healthInsurance ?? 0),
       retirement: Number(s.retirement ?? 0),
-      hoursWorked: Number(s.hoursWorked ?? 0),
+      hoursWorked: s.hoursWorked ? Number(s.hoursWorked) : null,
     }))
   );
 });

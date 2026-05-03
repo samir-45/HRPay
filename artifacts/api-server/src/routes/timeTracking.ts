@@ -8,18 +8,23 @@ import {
   ApproveTimeEntryParams,
 } from "@workspace/api-zod";
 import { notify } from "../lib/notify";
-import { requireNonEmployee } from "../lib/auth-helpers";
+import { requireNonEmployee, getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
 router.get("/time/entries", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { employeeId, startDate, endDate, status } = ListTimeEntriesQueryParams.parse(req.query);
+  const cid = user.companyId;
 
   const conditions = [];
   if (employeeId) conditions.push(eq(timeEntriesTable.employeeId, employeeId));
   if (status) conditions.push(eq(timeEntriesTable.status, status));
   if (startDate) conditions.push(gte(timeEntriesTable.date, startDate));
   if (endDate) conditions.push(lte(timeEntriesTable.date, endDate));
+  if (cid) conditions.push(eq(employeesTable.companyId, cid));
 
   const entries = await db
     .select({
@@ -62,13 +67,25 @@ router.post("/time/entries", async (req, res) => {
 
   const [entry] = await db
     .insert(timeEntriesTable)
-    .values({ ...body, hoursWorked })
+    .values({ ...body, hoursWorked: hoursWorked ?? body.hoursWorked?.toString() })
     .returning();
-  res.status(201).json({ ...entry, hoursWorked: entry.hoursWorked ? Number(entry.hoursWorked) : null });
+
+  await notify(
+    "Time Entry Submitted",
+    `A new time entry has been submitted for ${entry.date}.`,
+    "info"
+  );
+
+  res.status(201).json({
+    ...entry,
+    hoursWorked: entry.hoursWorked ? Number(entry.hoursWorked) : null,
+    overtimeHours: entry.overtimeHours ? Number(entry.overtimeHours) : 0,
+  });
 });
 
 router.post("/time/entries/:id/approve", async (req, res) => {
   if (!requireNonEmployee(req, res)) return;
+
   const { id } = ApproveTimeEntryParams.parse({ id: Number(req.params.id) });
   const [updated] = await db
     .update(timeEntriesTable)
@@ -77,19 +94,29 @@ router.post("/time/entries/:id/approve", async (req, res) => {
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
 
-  const [emp] = await db
-    .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
-    .from(employeesTable)
-    .where(eq(employeesTable.id, updated.employeeId));
-  const empName = emp ? `${emp.firstName} ${emp.lastName}` : "Employee";
-  const hours = updated.hoursWorked ? `${Number(updated.hoursWorked).toFixed(1)}h` : "a time entry";
-  await notify(
-    "Time Entry Approved",
-    `${empName}'s time entry for ${updated.date} (${hours}) has been approved.`,
-    "success"
-  );
+  res.json({
+    ...updated,
+    hoursWorked: updated.hoursWorked ? Number(updated.hoursWorked) : null,
+    overtimeHours: updated.overtimeHours ? Number(updated.overtimeHours) : 0,
+  });
+});
 
-  res.json({ ...updated, hoursWorked: updated.hoursWorked ? Number(updated.hoursWorked) : null });
+router.post("/time/entries/:id/reject", async (req, res) => {
+  if (!requireNonEmployee(req, res)) return;
+
+  const id = Number(req.params.id);
+  const [updated] = await db
+    .update(timeEntriesTable)
+    .set({ status: "rejected" })
+    .where(eq(timeEntriesTable.id, id))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Not found" });
+
+  res.json({
+    ...updated,
+    hoursWorked: updated.hoursWorked ? Number(updated.hoursWorked) : null,
+    overtimeHours: updated.overtimeHours ? Number(updated.overtimeHours) : 0,
+  });
 });
 
 export default router;

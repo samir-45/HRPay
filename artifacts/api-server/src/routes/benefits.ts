@@ -7,10 +7,11 @@ import {
   ListBenefitEnrollmentsQueryParams,
   CreateBenefitEnrollmentBody,
 } from "@workspace/api-zod";
+import { getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
-router.get("/benefits/plans", async (req, res) => {
+router.get("/benefits/plans", async (_req, res) => {
   const plans = await db.select().from(benefitPlansTable);
   const enrollmentCounts = await db
     .select({ planId: benefitEnrollmentsTable.planId, count: count() })
@@ -42,10 +43,16 @@ router.post("/benefits/plans", async (req, res) => {
 });
 
 router.get("/benefits/enrollments", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { employeeId, planId } = ListBenefitEnrollmentsQueryParams.parse(req.query);
+  const cid = user.companyId;
+
   const conditions = [];
   if (employeeId) conditions.push(eq(benefitEnrollmentsTable.employeeId, employeeId));
   if (planId) conditions.push(eq(benefitEnrollmentsTable.planId, planId));
+  if (cid) conditions.push(eq(employeesTable.companyId, cid));
 
   const enrollments = await db
     .select({
@@ -61,7 +68,8 @@ router.get("/benefits/enrollments", async (req, res) => {
     .from(benefitEnrollmentsTable)
     .leftJoin(employeesTable, eq(benefitEnrollmentsTable.employeeId, employeesTable.id))
     .leftJoin(benefitPlansTable, eq(benefitEnrollmentsTable.planId, benefitPlansTable.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined);
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(benefitEnrollmentsTable.enrolledAt);
 
   res.json(
     enrollments.map((e) => ({
@@ -75,6 +83,14 @@ router.post("/benefits/enrollments", async (req, res) => {
   const body = CreateBenefitEnrollmentBody.parse(req.body);
   const [enrollment] = await db.insert(benefitEnrollmentsTable).values(body).returning();
   res.status(201).json(enrollment);
+});
+
+router.delete("/benefits/enrollments/:id", async (req, res) => {
+  await db
+    .update(benefitEnrollmentsTable)
+    .set({ isActive: false })
+    .where(eq(benefitEnrollmentsTable.id, Number(req.params.id)));
+  res.status(204).send();
 });
 
 export default router;

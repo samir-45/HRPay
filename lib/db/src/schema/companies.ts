@@ -15,6 +15,7 @@ export const companiesTable = pgTable("companies", {
   status: text("status").notNull().default("active"),
   trialEndsAt: timestamp("trial_ends_at"),
   featurePermissions: jsonb("feature_permissions"),
+  settings: jsonb("settings"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

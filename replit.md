@@ -26,42 +26,88 @@ pnpm --filter @workspace/db run push
 
 # Typecheck everything
 pnpm run typecheck
+
+# Build API server (required before restart)
+pnpm --filter @workspace/api-server run build
 ```
+
+## Production Security (Hardened)
+
+- **Helmet.js** — security headers on all responses (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, etc.)
+- **Rate limiting** — 300 req/15min general; 20 req/15min on auth endpoints (`/api/auth/login`, `/api/auth/change-password`, `/api/companies/register`)
+- **CORS** — restricted to `*.replit.dev`, `*.repl.co`, and localhost; credentials enabled
+- **Global error handler** — catches all unhandled Express errors, returns `{ error }` JSON without stack traces in production
+- **Graceful shutdown** — SIGTERM/SIGINT close HTTP server + DB pool; 10s force-exit fallback
+- **Uncaught exception / rejection handlers** — log and exit cleanly
+- **DB health check** — `GET /api/healthz` runs `SELECT 1` and returns `db: "ok"` or `db: "error"` with 503
+
+## Multi-Tenancy Data Isolation
+
+Every data endpoint is scoped to the authenticated user's `companyId` from the JWT. No user can read another company's data:
+- Employee-keyed tables (employees, departments): filtered by `employees.company_id = user.companyId`
+- Employee-linked tables (leave, time, benefits, expenses, onboarding, performance, training): joined to employees and filtered by `employees.company_id`
+- Payroll runs, announcements: have `company_id` column in DB, filtered directly
+- Auth helpers: `getRequestUser()`, `requireAuth()`, `requireCompanyUser()`, `requireNonEmployee()`, `requireRoles()`
+
+## Settings Persistence
+
+Company settings are stored in `companies.settings` JSONB column. Fields persisted:
+- `currency`, `timezone`, `dateFormat`, `payPeriod`
+- `email`, `phone`, `address`, `website`, `registrationNumber`, `fiscalYearStart`
+- `workingHoursPerDay`, `workingDaysPerWeek`
+
+The frontend `CompanySettingsProvider` (`/src/components/company-settings-context.tsx`) exposes:
+- `settings` — live company settings object
+- `formatCurrency(amount)` — formats using `Intl.NumberFormat` with company currency
+- `formatDate(date)` — respects company dateFormat (MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, DD.MM.YYYY)
+
+## Internationalization
+
+Supported currencies: USD, EUR, GBP, CAD, AUD, INR, SGD, AED, JPY, CNY, NGN, ZAR, BRL, MXN, KRW, CHF, SEK, NOK, DKK
+
+Supported timezones: UTC, Americas (LA, NY, Chicago, Toronto, Sao Paulo), Europe (London, Paris, Berlin, Amsterdam), Africa (Lagos, Johannesburg), Middle East (Dubai), Asia (Kolkata, Singapore, Shanghai, Tokyo), Australia (Sydney)
+
+Date formats: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, DD.MM.YYYY
+
+## React Error Boundary
+
+`ErrorBoundary` component (`/src/components/error-boundary.tsx`) wraps:
+1. The entire `App` at root level (catches provider errors)
+2. Each `ProtectedRoute` page component (shows per-page error with "Try again" button)
 
 ## Database Schema (PostgreSQL via Drizzle ORM)
 
-- `departments` — org structure, budget, manager
-- `employees` — full profile, compensation, employment status
-- `payroll_runs` — bi-weekly runs with status lifecycle (draft → completed)
+- `companies` — org profile, plan, `settings` JSONB (currency, timezone, dateFormat, etc.), `feature_permissions` JSONB
+- `departments` — org structure, budget, manager; has `company_id`
+- `employees` — full profile, compensation, employment status; has `company_id`, `employee_code` (EMP-XXXXXX)
+- `payroll_runs` — bi-weekly runs with status lifecycle (draft → completed); has `company_id`
 - `pay_stubs` — per-employee stub generated on payroll processing
-- `time_entries` — clock in/out with approval workflow
-- `leave_requests` — PTO/sick/personal with approval
+- `time_entries` — clock in/out with approval workflow; linked to employee (company isolation via join)
+- `leave_requests` — PTO/sick/personal with approval; linked to employee
 - `leave_balances` — allocated/used/pending per employee/year
 - `benefit_plans` — health, dental, vision, life, retirement
 - `benefit_enrollments` — employee plan membership
 - `onboarding_tasks` — grouped by employee with completion tracking
+- `announcements` — company-scoped; has `company_id`
+- `expense_claims` — per-employee expense with approval; linked to employee
+- `assets` — asset inventory; linked to assigned employee
+- `job_postings`, `applications` — recruitment pipeline
+- `goals`, `performance_reviews` — performance management
+- `courses`, `enrollments` — training/LMS
 
-## API Endpoints
+## Test Accounts
 
-All routes under `/api`:
-- `GET/POST /employees` — employee CRUD
-- `GET/PUT/DELETE /employees/:id`
-- `GET/POST /departments`, `PUT/DELETE /departments/:id`
-- `GET/POST /payroll/runs`, `GET /payroll/runs/:id`, `POST /payroll/runs/:id/process`
-- `GET /payroll/stubs`
-- `GET/POST /time/entries`, `POST /time/entries/:id/approve`
-- `GET/POST /leave/requests`, `POST /leave/requests/:id/approve|reject`
-- `GET /leave/balances`
-- `GET/POST /benefits/plans`, `GET/POST /benefits/enrollments`
-- `GET /analytics/dashboard|headcount|payroll-trends|leave-summary|upcoming-events`
-- `GET/POST /onboarding/tasks`, `POST /onboarding/tasks/:id/complete`
+- `john@testcorp.com` / `Admin@123` — company_admin, companyId=1
+- `superadmin@hrpay.com` / `Admin@123` — super_admin
+- `samtsan6@gmail.com` / `Admin@123` — employee, companyId=1
 
 ## Frontend Pages
 
 | Route | Page |
 |---|---|
-| `/` | Dashboard — KPIs, payroll trend chart, headcount bar chart, leave pie chart, upcoming events |
-| `/employees` | Directory with search, department/status filters, list/grid toggle |
+| `/` | Landing page |
+| `/dashboard` | KPIs, payroll trend chart, headcount bar chart, leave pie chart |
+| `/employees` | Directory with search, department/status filters, employee codes |
 | `/employees/new` | Add employee form |
 | `/employees/:id` | Full profile — pay history, leave balances, benefits, time entries |
 | `/payroll` | Runs list — draft and completed sections |
@@ -71,18 +117,28 @@ All routes under `/api`:
 | `/benefits` | Plans grid + enrollments table |
 | `/onboarding` | Tasks grouped by employee with progress bars |
 | `/departments` | Cards with headcount, budget, CRUD |
+| `/announcements` | Company-scoped announcements |
+| `/expenses` | Expense claims with approval workflow |
+| `/assets` | Asset inventory with employee assignment |
+| `/recruitment` | Job postings + applicant pipeline |
+| `/performance` | Goals + performance reviews |
+| `/training` | Courses + enrollment tracking |
+| `/org-chart` | Interactive hierarchy chart |
+| `/reports` | Headcount, payroll summary, leave, attendance reports |
+| `/settings` | Company settings (DB-persisted), locale, payroll config, security, notifications |
+| `/permissions` | Role-based feature permission matrix |
+| `/team` | Team management — invite, role assignment |
+| `/super-admin` | Platform-level company, subscription, user management |
 
 ## Design System
 
-- **Primary color**: Deep ocean blue (`hsl(199 89% 30%)`)
-- **Sidebar**: Navy (`hsl(222 47% 11%)`) — dark authority
+- **Primary color**: Lime (`hsl(82 80% 48%)`)
+- **Background**: `hsl(220 20% 96%)`
+- **Sidebar**: White with lime accents
 - **Typography**: Inter
 - **Components**: shadcn/ui + Tailwind CSS v4
 - **Charts**: Recharts
-
-## Seed Data
-
-20 realistic employees across 7 departments, 10 payroll runs (8 completed, 2 draft), leave requests, time entries, benefit plan enrollments, and onboarding tasks for newest hires.
+- **Notifications**: Sonner toasts
 
 ## Codegen Notes
 
@@ -90,3 +146,10 @@ The `lib/api-spec/package.json` codegen script patches `lib/api-zod/src/index.ts
 ```
 orval --config ./orval.config.ts && echo 'export * from "./generated/api";' > ../api-zod/src/index.ts && pnpm -w run typecheck:libs
 ```
+
+## Notes for Future Development
+
+- `formatCurrency()` and `formatDate()` from `useCompanySettings()` hook should be used in all pages that display money or dates
+- All new API routes must call `getRequestUser()` or `requireCompanyUser()` and filter queries by `companyId`
+- New DB tables that store company-specific data should include a `company_id` column
+- The `pool` export from `@workspace/db` is used in `index.ts` for graceful shutdown
