@@ -7,6 +7,7 @@ import {
   CreateTimeEntryBody,
   ApproveTimeEntryParams,
 } from "@workspace/api-zod";
+import { notify } from "../lib/notify";
 
 const router = Router();
 
@@ -73,6 +74,19 @@ router.post("/time/entries/:id/approve", async (req, res) => {
     .where(eq(timeEntriesTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
+
+  const [emp] = await db
+    .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+    .from(employeesTable)
+    .where(eq(employeesTable.id, updated.employeeId));
+  const empName = emp ? `${emp.firstName} ${emp.lastName}` : "Employee";
+  const hours = updated.hoursWorked ? `${Number(updated.hoursWorked).toFixed(1)}h` : "a time entry";
+  await notify(
+    "Time Entry Approved",
+    `${empName}'s time entry for ${updated.date} (${hours}) has been approved.`,
+    "success"
+  );
+
   res.json({ ...updated, hoursWorked: updated.hoursWorked ? Number(updated.hoursWorked) : null });
 });
 

@@ -10,6 +10,7 @@ import {
   UpdateEmployeeBody,
   DeleteEmployeeParams,
 } from "@workspace/api-zod";
+import { notify } from "../lib/notify";
 
 const router = Router();
 
@@ -75,6 +76,13 @@ router.get("/employees", async (req, res) => {
 router.post("/employees", async (req, res) => {
   const body = CreateEmployeeBody.parse(req.body);
   const [employee] = await db.insert(employeesTable).values(body).returning();
+
+  await notify(
+    "New Employee Joined",
+    `${employee.firstName} ${employee.lastName} has been added as ${employee.position}${body.departmentId ? "" : ""}.`,
+    "celebration"
+  );
+
   res.status(201).json(employee);
 });
 

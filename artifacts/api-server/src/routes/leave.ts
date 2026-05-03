@@ -9,6 +9,7 @@ import {
   RejectLeaveRequestParams,
   ListLeaveBalancesQueryParams,
 } from "@workspace/api-zod";
+import { notify } from "../lib/notify";
 
 const router = Router();
 
@@ -60,6 +61,19 @@ router.post("/leave/requests", async (req, res) => {
     .insert(leaveRequestsTable)
     .values({ ...body, days: days.toString() })
     .returning();
+
+  // Look up employee name for a richer notification
+  const [emp] = await db
+    .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+    .from(employeesTable)
+    .where(eq(employeesTable.id, body.employeeId));
+  const empName = emp ? `${emp.firstName} ${emp.lastName}` : "An employee";
+  await notify(
+    "New Leave Request",
+    `${empName} submitted a ${body.type} leave request for ${days} day${days !== 1 ? "s" : ""} (${body.startDate} – ${body.endDate}).`,
+    "info"
+  );
+
   res.status(201).json({ ...request, days: Number(request.days) });
 });
 
@@ -71,6 +85,18 @@ router.post("/leave/requests/:id/approve", async (req, res) => {
     .where(eq(leaveRequestsTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
+
+  const [emp] = await db
+    .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+    .from(employeesTable)
+    .where(eq(employeesTable.id, updated.employeeId));
+  const empName = emp ? `${emp.firstName} ${emp.lastName}` : "Employee";
+  await notify(
+    "Leave Request Approved",
+    `${empName}'s ${updated.type} leave request (${updated.startDate} – ${updated.endDate}) has been approved.`,
+    "success"
+  );
+
   res.json({ ...updated, days: Number(updated.days) });
 });
 
@@ -82,6 +108,18 @@ router.post("/leave/requests/:id/reject", async (req, res) => {
     .where(eq(leaveRequestsTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
+
+  const [emp] = await db
+    .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+    .from(employeesTable)
+    .where(eq(employeesTable.id, updated.employeeId));
+  const empName = emp ? `${emp.firstName} ${emp.lastName}` : "Employee";
+  await notify(
+    "Leave Request Rejected",
+    `${empName}'s ${updated.type} leave request (${updated.startDate} – ${updated.endDate}) has been rejected.`,
+    "warning"
+  );
+
   res.json({ ...updated, days: Number(updated.days) });
 });
 

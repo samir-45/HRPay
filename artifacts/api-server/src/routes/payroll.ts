@@ -13,6 +13,7 @@ import {
   ProcessPayrollRunParams,
   ListPayStubsQueryParams,
 } from "@workspace/api-zod";
+import { notify } from "../lib/notify";
 
 const router = Router();
 
@@ -39,6 +40,13 @@ router.get("/payroll/runs", async (req, res) => {
 router.post("/payroll/runs", async (req, res) => {
   const body = CreatePayrollRunBody.parse(req.body);
   const [run] = await db.insert(payrollRunsTable).values(body).returning();
+
+  await notify(
+    "Payroll Run Created",
+    `A new payroll run "${run.name}" has been created for the period ${run.periodStart} – ${run.periodEnd} (pay date: ${run.payDate}).`,
+    "info"
+  );
+
   res.status(201).json({
     ...run,
     totalGrossPay: Number(run.totalGrossPay ?? 0),
@@ -125,6 +133,13 @@ router.post("/payroll/runs/:id/process", async (req, res) => {
     })
     .where(eq(payrollRunsTable.id, id))
     .returning();
+
+  const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  await notify(
+    "Payroll Run Completed",
+    `"${run.name}" has been processed for ${employees.length} employee${employees.length !== 1 ? "s" : ""}. Net pay: ${fmt(totalNet)}, Gross: ${fmt(totalGross)}.`,
+    "success"
+  );
 
   res.json({
     ...updated,

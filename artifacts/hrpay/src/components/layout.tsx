@@ -46,8 +46,8 @@ const baseNavigation: NavItem[] = [
 ];
 
 interface Announcement {
-  id: number; title: string; content: string; priority: string;
-  createdAt: string; authorName?: string;
+  id: number; title: string; content: string; type: string;
+  createdAt: string; publishedBy?: string;
 }
 
 function timeAgo(dateStr: string) {
@@ -60,11 +60,13 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-const PRIORITY_ICON: Record<string, React.ElementType> = {
-  urgent: AlertCircle, high: AlertCircle, normal: Info, low: PartyPopper,
+const TYPE_ICON: Record<string, React.ElementType> = {
+  urgent: AlertCircle, warning: AlertCircle, info: Info,
+  success: CheckCheck, celebration: PartyPopper,
 };
-const PRIORITY_COLOR: Record<string, string> = {
-  urgent: "text-red-500", high: "text-orange-500", normal: "text-blue-500", low: "text-emerald-500",
+const TYPE_COLOR: Record<string, string> = {
+  urgent: "text-red-500", warning: "text-orange-500", info: "text-blue-500",
+  success: "text-emerald-500", celebration: "text-lime-600",
 };
 
 function NotificationBell({ token }: { token: string | null }) {
@@ -78,10 +80,15 @@ function NotificationBell({ token }: { token: string | null }) {
 
   useEffect(() => {
     if (!token) return;
-    fetch("/api/announcements", { headers: apiHeaders(token) })
-      .then(r => r.json())
-      .then((data: Announcement[]) => setAnnouncements(Array.isArray(data) ? data.slice(0, 10) : []))
-      .catch(() => {});
+    function load() {
+      fetch("/api/announcements", { headers: apiHeaders(token!) })
+        .then(r => r.json())
+        .then((data: Announcement[]) => setAnnouncements(Array.isArray(data) ? data.slice(0, 10) : []))
+        .catch(() => {});
+    }
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
   }, [token]);
 
   useEffect(() => {
@@ -134,11 +141,11 @@ function NotificationBell({ token }: { token: string | null }) {
               </div>
             ) : announcements.map(a => {
               const isRead = readIds.has(a.id);
-              const Icon = PRIORITY_ICON[a.priority] ?? Info;
+              const Icon = TYPE_ICON[a.type] ?? Info;
               return (
                 <button key={a.id} onClick={() => markRead(a.id)}
                   className={cn("w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/40 transition-colors", !isRead && "bg-lime-50/60")}>
-                  <div className={cn("mt-0.5 shrink-0", PRIORITY_COLOR[a.priority] ?? "text-blue-500")}><Icon className="h-3.5 w-3.5" /></div>
+                  <div className={cn("mt-0.5 shrink-0", TYPE_COLOR[a.type] ?? "text-blue-500")}><Icon className="h-3.5 w-3.5" /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className={cn("text-xs font-semibold text-foreground truncate", !isRead && "font-bold")}>{a.title}</p>
