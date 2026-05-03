@@ -39,7 +39,7 @@ export default function Employees() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const qc = useQueryClient();
 
-  const params = { page: 1, limit: 100, ...(search && { search }), ...(dept && { department: dept }), ...(status && { status }) };
+  const params = { page: 1, limit: 100, ...(search && { search }), ...(dept && { department: dept }), ...(status && { status: status as "active" | "inactive" | "on_leave" | "terminated" }) };
   const { data, isLoading } = useListEmployees(params, { query: { queryKey: getListEmployeesQueryKey(params) } });
   const { data: depts } = useListDepartments();
   const deleteMut = useDeleteEmployee({

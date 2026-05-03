@@ -46,7 +46,7 @@ export default function CeooDashboard() {
   const hc = headcount.data ?? [];
   const tr = trends.data ?? [];
   const ls = leaveSummary.data ?? [];
-  const totalEmployees = hc.reduce((a, d) => a + d.fullTime + d.partTime + (d.contractors ?? 0), 0);
+  const totalEmployees = hc.reduce((a, d) => a + (d.fullTime ?? 0) + (d.partTime ?? 0) + (d.contractors ?? 0), 0);
 
   return (
     <div className="space-y-6">

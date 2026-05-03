@@ -45,7 +45,7 @@ export default function EmployeeProfile() {
   const { data: stubs } = useListPayStubs({ employeeId: empId }, { query: { queryKey: getListPayStubsQueryKey({ employeeId: empId }) } });
   const { data: balances } = useListLeaveBalances({ employeeId: empId }, { query: { queryKey: getListLeaveBalancesQueryKey({ employeeId: empId }) } });
   const { data: enrollments } = useListBenefitEnrollments({ employeeId: empId }, { query: { queryKey: getListBenefitEnrollmentsQueryKey({ employeeId: empId }) } });
-  const { data: timeEntries } = useListTimeEntries({ employeeId: empId, limit: 10 }, { query: { queryKey: getListTimeEntriesQueryKey({ employeeId: empId, limit: 10 }) } });
+  const { data: timeEntries } = useListTimeEntries({ employeeId: empId }, { query: { queryKey: getListTimeEntriesQueryKey({ employeeId: empId }) } });
 
   if (isLoading) return <SkeletonEmployeeProfile />;
   if (!emp) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Employee not found.</div>;
@@ -120,7 +120,7 @@ export default function EmployeeProfile() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {(balances ?? []).map((b) => (
-                  <div key={b.id} className="rounded-lg border border-border p-3">
+                  <div key={b.type} className="rounded-lg border border-border p-3">
                     <p className="text-xs text-muted-foreground capitalize">{b.type}</p>
                     <p className="text-xl font-bold text-foreground">{b.remaining}</p>
                     <p className="text-xs text-muted-foreground">{b.used} used of {b.allocated}</p>

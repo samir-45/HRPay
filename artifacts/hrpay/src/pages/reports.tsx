@@ -263,7 +263,7 @@ export default function Reports() {
                 {(at?.entries ?? []).slice(0, 20).map(e => (
                   <tr key={e.id} className="border-b border-border/50 hover:bg-muted/30">
                     <td className="py-2 px-2 font-medium">{e.firstName} {e.lastName}</td>
-                    <td className="py-2 px-2 text-muted-foreground">{e.departmentName ?? "—"}</td>
+                    <td className="py-2 px-2 text-muted-foreground">—</td>
                     <td className="py-2 px-2 text-muted-foreground">{e.date}</td>
                     <td className="py-2 px-2 font-medium">{e.hoursWorked ?? "—"}h</td>
                     <td className="py-2 px-2 capitalize text-muted-foreground">{e.type ?? "—"}</td>
