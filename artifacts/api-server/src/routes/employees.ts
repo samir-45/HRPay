@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { employeesTable, departmentsTable } from "@workspace/db";
-import { eq, ilike, and, or } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
   ListEmployeesQueryParams,
   CreateEmployeeBody,
@@ -11,6 +11,7 @@ import {
   DeleteEmployeeParams,
 } from "@workspace/api-zod";
 import { notify } from "../lib/notify";
+import { getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
@@ -79,12 +80,76 @@ router.post("/employees", async (req, res) => {
 
   await notify(
     "New Employee Joined",
-    `${employee.firstName} ${employee.lastName} has been added as ${employee.position}${body.departmentId ? "" : ""}.`,
+    `${employee.firstName} ${employee.lastName} has been added as ${employee.position}.`,
     "celebration"
   );
 
   res.status(201).json(employee);
 });
+
+/* ── Self-service: authenticated employee reads/updates their own record ── */
+
+router.get("/employees/me", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const [row] = await db
+    .select({
+      id: employeesTable.id,
+      firstName: employeesTable.firstName,
+      lastName: employeesTable.lastName,
+      email: employeesTable.email,
+      phone: employeesTable.phone,
+      position: employeesTable.position,
+      departmentId: employeesTable.departmentId,
+      departmentName: departmentsTable.name,
+      employmentType: employeesTable.employmentType,
+      status: employeesTable.status,
+      startDate: employeesTable.startDate,
+      avatarUrl: employeesTable.avatarUrl,
+      address: employeesTable.address,
+      city: employeesTable.city,
+      state: employeesTable.state,
+      country: employeesTable.country,
+    })
+    .from(employeesTable)
+    .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
+    .where(eq(employeesTable.email, authUser.email.toLowerCase()));
+
+  if (!row) { res.status(404).json({ error: "Employee record not found for this account" }); return; }
+  res.json(row);
+});
+
+router.patch("/employees/me", async (req, res) => {
+  const authUser = getRequestUser(req);
+  if (!authUser) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const { firstName, lastName, phone, avatarUrl, address, city, state, country } = req.body as {
+    firstName?: string; lastName?: string; phone?: string;
+    avatarUrl?: string; address?: string; city?: string; state?: string; country?: string;
+  };
+
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  if (firstName !== undefined) patch.firstName = firstName;
+  if (lastName !== undefined) patch.lastName = lastName;
+  if (phone !== undefined) patch.phone = phone;
+  if (avatarUrl !== undefined) patch.avatarUrl = avatarUrl;
+  if (address !== undefined) patch.address = address;
+  if (city !== undefined) patch.city = city;
+  if (state !== undefined) patch.state = state;
+  if (country !== undefined) patch.country = country;
+
+  const [updated] = await db
+    .update(employeesTable)
+    .set(patch)
+    .where(eq(employeesTable.email, authUser.email.toLowerCase()))
+    .returning();
+
+  if (!updated) { res.status(404).json({ error: "Employee record not found" }); return; }
+  res.json(updated);
+});
+
+/* ── Admin CRUD ── */
 
 router.get("/employees/:id", async (req, res) => {
   const { id } = GetEmployeeParams.parse({ id: Number(req.params.id) });
