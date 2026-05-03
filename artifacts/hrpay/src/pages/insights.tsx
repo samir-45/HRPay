@@ -189,6 +189,7 @@ export default function Insights() {
       qc.invalidateQueries({ queryKey: ["insights"] });
       toast.success(enabled ? "AI Insights disabled" : "AI Insights enabled");
     },
+    onError: () => toast.error("Failed to update AI Insights setting", { description: "Please try again." }),
   });
 
   const scoreLabel = !insight?.score ? "" : insight.score >= 80 ? "Healthy" : insight.score >= 60 ? "Needs Attention" : "Critical";

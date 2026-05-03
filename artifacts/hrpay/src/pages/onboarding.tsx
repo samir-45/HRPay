@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import { CheckCircle2, Circle, Plus, X } from "lucide-react";
 import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
@@ -40,7 +41,7 @@ export default function Onboarding() {
     query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
   });
 
-  const completeMut = useCompleteOnboardingTask({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListOnboardingTasksQueryKey({}) }) } });
+  const completeMut = useCompleteOnboardingTask({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListOnboardingTasksQueryKey({}) }), onError: () => toast.error("Failed to complete task", { description: "Please try again." }) } });
   const createMut = useCreateOnboardingTask({
     mutation: {
       onSuccess: () => {
@@ -48,6 +49,7 @@ export default function Onboarding() {
         setShowModal(false);
         setForm({ employeeId: "", title: "", description: "", category: "documentation", dueDate: "", priority: "medium", assignedTo: "" });
       },
+      onError: () => toast.error("Failed to create task", { description: "Please check your input and try again." }),
     },
   });
 

@@ -84,12 +84,14 @@ export default function Expenses() {
       setShowForm(false);
       setForm({ employeeId: myEmployeeId ? String(myEmployeeId) : "", title: "", category: "travel", amount: "", expenseDate: new Date().toISOString().split("T")[0], description: "" });
     },
+    onError: () => toast.error("Failed to submit expense", { description: "Please check your input and try again." }),
   });
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status, reviewNotes }: { id: number; status: string; reviewNotes?: string }) =>
       fetch(`${API}/expenses/${id}/status`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ status, reviewNotes, reviewedBy: user?.name ?? "Admin" }) }).then(r => r.json()),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["expenses"] }); setSelected(null); },
+    onError: () => toast.error("Failed to update expense status", { description: "Please try again." }),
   });
 
   const allExpenses = expenses.data ?? [];

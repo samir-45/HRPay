@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import { SkeletonGoalCards } from "@/components/skeletons";
 import { Target, Plus, X, Star, TrendingUp, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 
@@ -34,14 +35,17 @@ export default function Performance() {
   const createGoal = useMutation({
     mutationFn: (body: typeof newGoal) => fetch(`${API}/performance/goals`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ ...body, employeeId: Number(body.employeeId), progress: Number(body.progress) }) }).then(r => r.json()),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["goals"] }); setShowGoalForm(false); },
+    onError: () => toast.error("Failed to create goal", { description: "Please try again." }),
   });
   const createReview = useMutation({
     mutationFn: (body: typeof newReview) => fetch(`${API}/performance/reviews`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ ...body, employeeId: Number(body.employeeId), overallRating: body.overallRating || null }) }).then(r => r.json()),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["reviews"] }); setShowReviewForm(false); },
+    onError: () => toast.error("Failed to create review", { description: "Please try again." }),
   });
   const updateGoalProgress = useMutation({
     mutationFn: ({ id, progress }: { id: number; progress: number }) => fetch(`${API}/performance/goals/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ progress }) }).then(r => r.json()),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["goals"] }),
+    onError: () => toast.error("Failed to update goal", { description: "Please try again." }),
   });
 
   const avgProgress = (goals.data ?? []).length ? Math.round((goals.data ?? []).reduce((s, g) => s + g.progress, 0) / (goals.data ?? []).length) : 0;

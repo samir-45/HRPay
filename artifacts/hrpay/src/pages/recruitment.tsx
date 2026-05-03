@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import { SkeletonJobCards } from "@/components/skeletons";
 import { Briefcase, Plus, X, ChevronRight, MapPin, DollarSign, Clock, Users } from "lucide-react";
 
@@ -30,10 +31,10 @@ export default function Recruitment() {
   const jobs = useQuery<Job[]>({ queryKey: ["jobs"], queryFn: () => fetch(`${API}/recruitment/jobs`, { headers: apiHeaders(token) }).then(r => r.json()) });
   const apps = useQuery<Application[]>({ queryKey: ["applications", selectedJob?.id], queryFn: () => fetch(`${API}/recruitment/applications?jobId=${selectedJob?.id}`, { headers: apiHeaders(token) }).then(r => r.json()), enabled: !!selectedJob });
 
-  const createJob = useMutation({ mutationFn: (body: typeof newJob) => fetch(`${API}/recruitment/jobs`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(body) }).then(r => r.json()), onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); setShowJobForm(false); setNewJob({ title: "", location: "", type: "full_time", salaryMin: "", salaryMax: "", description: "", status: "open" }); } });
-  const createApp = useMutation({ mutationFn: (body: object) => fetch(`${API}/recruitment/applications`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(body) }).then(r => r.json()), onSuccess: () => { qc.invalidateQueries({ queryKey: ["applications"] }); setShowAppForm(false); } });
-  const moveApp = useMutation({ mutationFn: ({ id, stage }: { id: number; stage: string }) => fetch(`${API}/recruitment/applications/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ stage }) }).then(r => r.json()), onSuccess: () => qc.invalidateQueries({ queryKey: ["applications"] }) });
-  const closeJob = useMutation({ mutationFn: (id: number) => fetch(`${API}/recruitment/jobs/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ status: "closed" }) }).then(r => r.json()), onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }) });
+  const createJob = useMutation({ mutationFn: (body: typeof newJob) => fetch(`${API}/recruitment/jobs`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(body) }).then(r => r.json()), onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); setShowJobForm(false); setNewJob({ title: "", location: "", type: "full_time", salaryMin: "", salaryMax: "", description: "", status: "open" }); }, onError: () => toast.error("Failed to create job posting", { description: "Please check your input and try again." }) });
+  const createApp = useMutation({ mutationFn: (body: object) => fetch(`${API}/recruitment/applications`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(body) }).then(r => r.json()), onSuccess: () => { qc.invalidateQueries({ queryKey: ["applications"] }); setShowAppForm(false); }, onError: () => toast.error("Failed to create application", { description: "Please try again." }) });
+  const moveApp = useMutation({ mutationFn: ({ id, stage }: { id: number; stage: string }) => fetch(`${API}/recruitment/applications/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ stage }) }).then(r => r.json()), onSuccess: () => qc.invalidateQueries({ queryKey: ["applications"] }), onError: () => toast.error("Failed to move application", { description: "Please try again." }) });
+  const closeJob = useMutation({ mutationFn: (id: number) => fetch(`${API}/recruitment/jobs/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ status: "closed" }) }).then(r => r.json()), onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }), onError: () => toast.error("Failed to close job posting", { description: "Please try again." }) });
 
   const appsByStage = (stage: string) => (apps.data ?? []).filter(a => a.stage === stage);
 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
 import { usePermissions } from "@/components/permissions-context";
+import { toast } from "@/components/ui/sonner";
 import { SkeletonAnnouncementCards } from "@/components/skeletons";
 import { Megaphone, Plus, X, Pin, Trash2 } from "lucide-react";
 
@@ -24,16 +25,19 @@ export default function Announcements() {
   const create = useMutation({
     mutationFn: () => fetch(`${API}/announcements`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(form) }).then(r => r.json()),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["announcements"] }); setShowForm(false); setForm({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" }); },
+    onError: () => toast.error("Failed to create announcement", { description: "Please check your input and try again." }),
   });
 
   const remove = useMutation({
     mutationFn: (id: number) => fetch(`${API}/announcements/${id}`, { method: "DELETE", headers: apiHeaders(token) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements"] }),
+    onError: () => toast.error("Failed to delete announcement", { description: "Please try again." }),
   });
 
   const pin = useMutation({
     mutationFn: ({ id, isPinned }: { id: number; isPinned: boolean }) => fetch(`${API}/announcements/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ isPinned }) }).then(r => r.json()),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements"] }),
+    onError: () => toast.error("Failed to update announcement", { description: "Please try again." }),
   });
 
   const pinned = (announcements.data ?? []).filter(a => a.isPinned);

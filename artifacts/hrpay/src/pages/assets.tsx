@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useListEmployees, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useAuth, apiHeaders } from "@/components/auth-context";
 import { SkeletonCards } from "@/components/skeletons";
+import { toast } from "@/components/ui/sonner";
 import { Monitor, Plus, Package, X, Pencil, Laptop, Smartphone, Wifi, Car, Armchair } from "lucide-react";
 
 const API = "/api";
@@ -69,6 +70,7 @@ export default function Assets() {
   const create = useMutation({
     mutationFn: () => fetch(`${API}/assets`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ ...form, purchaseCost: form.purchaseCost ? parseFloat(form.purchaseCost) : undefined }) }).then(r => r.json()),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["assets"] }); setShowForm(false); setForm({ ...emptyForm }); },
+    onError: () => toast.error("Failed to create asset", { description: "Please check your input and try again." }),
   });
 
   const update = useMutation({
@@ -77,6 +79,7 @@ export default function Assets() {
       return fetch(`${API}/assets/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify(rest) }).then(r => r.json());
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["assets"] }); setEditing(null); setAssigning(null); },
+    onError: () => toast.error("Failed to update asset", { description: "Please try again." }),
   });
 
   const list = (assets.data ?? []).filter(a =>

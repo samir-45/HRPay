@@ -12,6 +12,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
 import { usePermissions } from "@/components/permissions-context";
+import { toast } from "@/components/ui/sonner";
 import { Check, X, Plus, CalendarDays } from "lucide-react";
 import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
@@ -60,8 +61,8 @@ export default function Leave() {
     query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
   });
 
-  const approveMut = useApproveLeaveRequest({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }) } });
-  const rejectMut = useRejectLeaveRequest({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }) } });
+  const approveMut = useApproveLeaveRequest({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }), onError: () => toast.error("Failed to approve leave", { description: "Please try again." }) } });
+  const rejectMut = useRejectLeaveRequest({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }), onError: () => toast.error("Failed to reject leave", { description: "Please try again." }) } });
   const createMut = useCreateLeaveRequest({
     mutation: {
       onSuccess: () => {
@@ -69,6 +70,7 @@ export default function Leave() {
         setShowModal(false);
         setForm({ employeeId: myEmployeeId ? String(myEmployeeId) : "", type: "vacation", startDate: "", endDate: "", reason: "" });
       },
+      onError: () => toast.error("Failed to request leave", { description: "Please check your input and try again." }),
     },
   });
 

@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePermissions } from "@/components/permissions-context";
+import { toast } from "@/components/ui/sonner";
 import { Plus, X } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -27,7 +28,7 @@ export default function Payroll() {
   const { hasPower } = usePermissions();
   const canProcess = hasPower("process_payroll");
   const { data: runs, isLoading } = useListPayrollRuns({}, { query: { queryKey: getListPayrollRunsQueryKey({}) } });
-  const createMut = useCreatePayrollRun({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListPayrollRunsQueryKey({}) }) } });
+  const createMut = useCreatePayrollRun({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListPayrollRunsQueryKey({}) }), onError: () => toast.error("Failed to create payroll run", { description: "Please check your input and try again." }) } });
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: "", periodStart: "", periodEnd: "", payDate: "", notes: "" });
 

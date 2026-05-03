@@ -47,6 +47,17 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 });
 
+// Global error handler for unhandled rejections (suppress image/video generation status errors)
+if (typeof window !== "undefined") {
+  window.addEventListener("unhandledrejection", (event) => {
+    const msg = event.reason?.message || String(event.reason);
+    // Suppress harmless generation status errors that come from failed background ops
+    if (msg?.includes?.("image generation status") || msg?.includes?.("video generation status")) {
+      event.preventDefault();
+    }
+  });
+}
+
 function LoadingScreen() {
   return (
     <div className="flex h-screen items-center justify-center" style={{ background: "hsl(220 20% 96%)" }}>

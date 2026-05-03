@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useCreateEmployee, useListDepartments, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/components/ui/sonner";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
@@ -26,6 +27,7 @@ export default function EmployeeNew() {
         qc.invalidateQueries({ queryKey: getListEmployeesQueryKey({}) });
         navigate(`/employees/${emp.id}`);
       },
+      onError: () => toast.error("Failed to create employee", { description: "Please check your input and try again." }),
     },
   });
 
