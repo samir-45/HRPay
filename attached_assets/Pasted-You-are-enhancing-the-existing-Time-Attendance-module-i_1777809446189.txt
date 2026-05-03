@@ -1,0 +1,248 @@
+You are enhancing the existing Time & Attendance module in our HRPay SaaS. 
+DO NOT rebuild what already exists. The current state is:
+- Weekly view with date navigator is working
+- Stats cards show real data (193.2h, 2.8h OT, 25 approved)
+- Attendance table exists with columns: Employee, Date, Clock In, Clock Out, Hours, OT, Notes, Status, Actions
+- Filter tabs (All/Pending/Approved/Rejected) exist
+- Data is seeded but only for one employee (Osama Khan) with duplicate identical rows
+- Some rows have missing clock-in/out data
+
+Your job is to EXTEND and FIX this page with the following, in order:
+
+═══════════════════════════════════════
+PRIORITY 1 — FIX EXISTING DATA & TABLE
+═══════════════════════════════════════
+1. Fix the seed data: generate realistic attendance records for ALL existing employees 
+   (not just Osama Khan), spread across different dates, with varied check-in/out 
+   times, realistic hours (6h–9h), some late arrivals, some overtime, some absent days
+2. Fix duplicate rows — each employee should have ONE record per day maximum
+3. Populate the OT column: calculate and show overtime hours (hours > 8h = OT)
+4. Fix missing clock-in/out rows — either fill with realistic data or mark as 
+   "Regularization Needed" status in red
+5. Add employee avatar/photo initials with department color (not just "O" circle)
+6. Make the ACTIONS column functional:
+   - "Done" button → clicking opens a detail view modal
+   - Add Edit (pencil icon) and Delete (trash icon) buttons per row
+   - For Pending rows: show Approve ✓ and Reject ✗ buttons instead
+
+═══════════════════════════════════════
+PRIORITY 2 — UPGRADE THE TABLE
+═══════════════════════════════════════
+1. Add search bar above table: search by employee name
+2. Add filter dropdowns: Department | Status | Date Range | Shift
+3. Add column: "Method" showing how attendance was recorded 
+   (icons: 🖐 Fingerprint / 😊 Face / 📡 NFC / 📱 Mobile / ✏️ Manual)
+4. Add column: "Late By" showing minutes late (e.g., "+12 min" in amber)
+5. Make all column headers sortable (click to sort asc/desc)
+6. Add pagination (25 rows per page) with total count shown
+7. Add bulk select checkboxes → bulk approve / bulk export selected rows
+8. Add "Export" button → exports filtered table to Excel and PDF
+9. Highlight rows by status: Late = amber left border, Absent = red left border, 
+   WFH = blue left border, Approved = green left border
+
+═══════════════════════════════════════
+PRIORITY 3 — UPGRADE THE STATS CARDS
+═══════════════════════════════════════
+Replace the 4 current cards with 6 improved cards:
+1. Hours This Week — keep existing, add sparkline mini chart
+2. Overtime Hours — keep existing, add "vs last week" % change
+3. Pending Approval — keep existing, make it clickable (filters table to Pending)
+4. Approved — keep existing
+5. NEW: "Absent Today" — count of employees with no check-in today, red color
+6. NEW: "Late Arrivals" — count of employees who checked in late today, amber color
+All cards should be clickable and filter the table below automatically.
+
+═══════════════════════════════════════
+PRIORITY 4 — ADD VIEW TOGGLE
+═══════════════════════════════════════
+Add 3 view buttons next to the week navigator: [List] [Week] [Month]
+
+Month View:
+- Calendar grid (5-6 rows × 7 columns)
+- Each day cell shows: attendance % badge, color dot
+- Click any day → slides open a panel showing that day's attendance list
+- Color coding: >90% present = green, 70-90% = yellow, <70% = red
+
+Week View (current) — keep as-is but improve:
+- Show each day column with employee count present/absent
+- Click a day column to drill down into that day
+
+List View (default, current table) — upgraded per Priority 2 above
+
+═══════════════════════════════════════
+PRIORITY 5 — ADD PAGE TABS
+═══════════════════════════════════════
+Add horizontal tabs below the "Time & Attendance" page header:
+[Overview] [Logs] [Shifts] [Devices] [Reports]
+
+Overview tab = current page content
+Logs tab = the full searchable/filterable table (Priority 2)
+Shifts tab = Shift Management (build this — see below)
+Devices tab = Attendance Machine Integration Hub (build this — see below)
+Reports tab = Analytics and exportable reports (see below)
+
+═══════════════════════════════════════
+PRIORITY 6 — SHIFTS TAB
+═══════════════════════════════════════
+Build the Shifts management UI:
+- List of all shifts in card format:
+  * Morning Shift: 9:00 AM – 5:00 PM | Mon-Fri | Grace: 10 min
+  * Evening Shift: 2:00 PM – 10:00 PM | Mon-Sat | Grace: 5 min  
+  * Night Shift: 10:00 PM – 6:00 AM | Mon-Sun | Grace: 15 min
+  (seed these 3 defaults)
+
+- "+ Add Shift" button opens modal:
+  * Shift name, start time, end time
+  * Grace period (minutes), break duration (minutes)
+  * Working days (Mon-Sun checkboxes)
+  * Overtime threshold (hours), color picker
+  
+- Shift Assignment section:
+  * Table showing Employee → Assigned Shift
+  * "Assign Shift" button: select employee(s) or entire department → pick shift
+  * Bulk assign by department dropdown
+
+═══════════════════════════════════════
+PRIORITY 7 — DEVICES TAB (MOST IMPORTANT)
+═══════════════════════════════════════
+Build a complete Universal Attendance Machine Integration Hub:
+
+DEVICES LIST PAGE:
+- Grid of device cards. Seed 2 sample devices:
+  * "Main Entrance" — ZKTeco — Fingerprint — TCP/IP — show as Online (green pulse)
+  * "Floor 2 Entry" — Hikvision — Facial Recognition — Webhook — show as Offline (red)
+- Each card shows: device name, brand logo placeholder, type icon, location, 
+  connection status with animated pulse, last sync time, punches today
+- Card action buttons: Edit | Test Connection | Sync Now | View Logs | Delete
+
+ADD DEVICE WIZARD — 6 step modal:
+
+STEP 1 — Device Type (visual grid of cards with icons):
+  [🖐 Fingerprint] [😊 Facial Recognition] [📡 NFC / RFID Card]
+  [🔢 PIN / Password] [📱 Mobile App] [🔀 Multi-Modal]
+  [📷 QR Code] [💻 Web Browser Check-in]
+
+STEP 2 — Brand Selection (grid of brand cards):
+  ZKTeco | Suprema | Hikvision | Anviz | eSSL | Matrix COSEC
+  Realtime | Mantra | TimeMoto | Virdi | Tuya Smart | Generic/Custom
+  Each card shows brand name + supported methods icons
+
+STEP 3 — Connection Method:
+  [🌐 TCP/IP Network] [📡 HTTP Webhook/Push]
+  [🔌 USB / Serial]   [☁️ Cloud API]
+  [📁 File Import]    [🔄 Cams Biometric Gateway]
+
+STEP 4 — Connection Config (dynamic fields based on Step 3):
+  TCP/IP: IP address field, Port (default 4370), Serial Number, Password, 
+          + "Test Connection" button that actually pings the endpoint
+  Webhook: Auto-generate unique webhook URL displayed in a copy-able code box:
+           "https://hrpay.app/api/devices/webhook/{auto-token}"
+           + show sample ZKTeco ADMS push format, JSON format, eSSL format
+  Cloud API: API URL, API Key, Username, Password, Test button
+  File Import: Upload area (drag & drop), format selector, column mapping UI
+  Cams Gateway: Gateway URL, API Key, Device Serial
+
+STEP 5 — Device Details:
+  Device name input, Location/Branch dropdown, 
+  Department scope (All / Specific), 
+  Device role: [Entry Only] [Exit Only] [Both],
+  Timezone selector, sync interval selector
+
+STEP 6 — Summary & Confirm:
+  Show all configured settings in a review card
+  "Add Device" button → saves and shows device in the grid
+
+WEBHOOK RECEIVER:
+Build POST /api/devices/webhook/:token endpoint that:
+- Accepts ZKTeco ADMS XML format: <attendance><item PIN="001" time="2026-05-03 09:00:00" status="0"/></attendance>
+- Accepts generic JSON: {"employee_id":"001","timestamp":"2026-05-03T09:00:00","type":"in"}
+- Accepts eSSL format: ?pin=001&time=20260503090000&stat=0
+- Matches employee by PIN/ID, creates attendance record, returns {"status":"done"}
+
+REAL-TIME LIVE FEED panel on Devices page:
+- Shows last 10 punches received from any device
+- Each row: employee avatar, name, device name, time, punch type (IN/OUT), method icon
+- Auto-refreshes every 10 seconds (polling)
+- Show "No live data — connect a device to see real-time punches" when empty
+
+═══════════════════════════════════════
+PRIORITY 8 — REPORTS TAB
+═══════════════════════════════════════
+Build a Reports tab with:
+
+1. ANALYTICS SECTION (top):
+   - Attendance Rate donut chart: Present / Late / Absent / Leave / WFH
+   - Weekly Hours Trend: line chart (this week vs last week)
+   - Late Arrivals by Day: bar chart
+   - Top 5 overtime employees: horizontal bar chart
+   - All charts use recharts, show real data from DB
+
+2. REPORTS SECTION (bottom):
+   Pre-built report cards (click to generate):
+   - Monthly Attendance Register (grid: employees × dates)
+   - Late Comers Report
+   - Absenteeism Report  
+   - Overtime Summary
+   - Department-wise Attendance
+   - Individual Employee Report
+   
+   Each report card has: title, description, date range picker, 
+   Export to Excel button, Export to PDF button
+
+═══════════════════════════════════════
+PRIORITY 9 — REGULARIZATION WORKFLOW
+═══════════════════════════════════════
+- Add "Request Correction" button in the Actions column for any row with 
+  missing clock-in/out or unusual data
+- Employee/HR fills: date, actual check-in time, actual check-out time, 
+  reason (dropdown: Forgot to punch / WFH / Field Work / Device Error / Other)
+- Manager receives notification and sees request in Pending tab
+- On approve: attendance record is updated, original preserved in audit log
+- Show "Regularized" badge on corrected rows in table
+
+═══════════════════════════════════════
+PRIORITY 10 — OVERTIME APPROVAL FLOW
+═══════════════════════════════════════
+- Any attendance record with hours > 8h automatically flags OT
+- OT column in table becomes clickable for flagged rows
+- Opens OT details modal: calculated OT hours, OT type (Regular/Weekend/Holiday),
+  Pay rate multiplier
+- Manager can approve or reject OT claim
+- Approved OT feeds a flag to payroll module (mark for payroll processing)
+
+═══════════════════════════════════════
+DATABASE — ADD MISSING TABLES
+═══════════════════════════════════════
+Run prisma migrate for any new tables needed:
+- attendance_devices (id, name, brand, type, connection_method, config_json, 
+  location, device_role, webhook_token, status, last_sync_at, tenant_id)
+- device_punch_logs (id, device_id, raw_payload, employee_id, punch_time, 
+  punch_type, method, is_processed)
+- shifts (id, name, start_time, end_time, grace_minutes, break_minutes, 
+  working_days, overtime_threshold, color, tenant_id)
+- shift_assignments (id, employee_id, department_id, shift_id, effective_from, 
+  effective_to)
+- regularization_requests (id, employee_id, date, requested_in, requested_out, 
+  reason, status, approved_by)
+
+Also fix the existing attendance_records table to add columns if missing:
+  method (fingerprint/face/nfc/pin/mobile/manual/qr)
+  device_id (foreign key)
+  late_minutes (integer)
+  is_regularized (boolean)
+  original_check_in, original_check_out (for audit)
+
+═══════════════════════════════════════
+SEED DATA FIX
+═══════════════════════════════════════
+Re-seed attendance with realistic data:
+- Use ALL employees in the system (not just Osama Khan)
+- Generate records for the past 30 days
+- Vary check-in times: 70% on time, 20% late (5-25 min), 10% absent
+- Vary hours: mostly 7.5h-8.5h, 15% with overtime (8.5h-10h)
+- Assign methods randomly: 40% fingerprint, 30% face, 15% NFC, 15% manual
+- Seed 3 default shifts (Morning, Evening, Night)
+- Assign shifts to employees by department
+- Seed 2 sample attendance devices
+
+DO NOT delete existing code. Audit first, then add/fix only what is missing or broken.
