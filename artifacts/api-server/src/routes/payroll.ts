@@ -167,15 +167,50 @@ router.get("/payroll/stubs", async (req, res) => {
   if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
 
   const { employeeId, payrollRunId } = ListPayStubsQueryParams.parse(req.query);
+
+  /* Employees can only view their own pay stubs */
+  const effectiveEmployeeId =
+    user.role === "employee" && user.employeeId ? user.employeeId : employeeId;
+
   const conditions = [];
-  if (employeeId) conditions.push(eq(payStubsTable.employeeId, employeeId));
+  if (effectiveEmployeeId) conditions.push(eq(payStubsTable.employeeId, effectiveEmployeeId));
   if (payrollRunId) conditions.push(eq(payStubsTable.payrollRunId, payrollRunId));
 
-  const stubs = await db
-    .select()
-    .from(payStubsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(payStubsTable.createdAt);
+  /* Company scoping via payroll run */
+  if (user.companyId && !effectiveEmployeeId) {
+    conditions.push(eq(payrollRunsTable.companyId, user.companyId));
+  }
+
+  /* Always scope stubs to company via payroll run join when user has a company */
+  const stubs = user.companyId
+    ? await db
+        .select({
+          id: payStubsTable.id,
+          payrollRunId: payStubsTable.payrollRunId,
+          employeeId: payStubsTable.employeeId,
+          grossPay: payStubsTable.grossPay,
+          netPay: payStubsTable.netPay,
+          federalTax: payStubsTable.federalTax,
+          stateTax: payStubsTable.stateTax,
+          socialSecurity: payStubsTable.socialSecurity,
+          medicare: payStubsTable.medicare,
+          healthInsurance: payStubsTable.healthInsurance,
+          retirement: payStubsTable.retirement,
+          hoursWorked: payStubsTable.hoursWorked,
+          createdAt: payStubsTable.createdAt,
+        })
+        .from(payStubsTable)
+        .innerJoin(payrollRunsTable, and(
+          eq(payStubsTable.payrollRunId, payrollRunsTable.id),
+          eq(payrollRunsTable.companyId, user.companyId)
+        ))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(payStubsTable.createdAt)
+    : await db
+        .select()
+        .from(payStubsTable)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(payStubsTable.createdAt);
 
   res.json(
     stubs.map((s) => ({

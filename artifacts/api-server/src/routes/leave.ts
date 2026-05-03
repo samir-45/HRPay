@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { leaveRequestsTable, leaveBalancesTable, employeesTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import {
   ListLeaveRequestsQueryParams,
   CreateLeaveRequestBody,
@@ -20,7 +20,12 @@ router.get("/leave/requests", async (req, res) => {
 
   const { employeeId, status, type } = ListLeaveRequestsQueryParams.parse(req.query);
   const conditions = [];
-  if (employeeId) conditions.push(eq(leaveRequestsTable.employeeId, employeeId));
+
+  /* Employees can only see their own requests */
+  const effectiveEmployeeId =
+    user.role === "employee" && user.employeeId ? user.employeeId : employeeId;
+
+  if (effectiveEmployeeId) conditions.push(eq(leaveRequestsTable.employeeId, effectiveEmployeeId));
   if (status) conditions.push(eq(leaveRequestsTable.status, status));
   if (type) conditions.push(eq(leaveRequestsTable.type, type));
 
@@ -62,6 +67,13 @@ router.post("/leave/requests", async (req, res) => {
   if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
 
   const body = CreateLeaveRequestBody.parse(req.body);
+
+  /* Employees can only submit for themselves */
+  if (user.role === "employee" && user.employeeId && body.employeeId !== user.employeeId) {
+    res.status(403).json({ error: "Cannot submit leave on behalf of another employee" });
+    return;
+  }
+
   const start = new Date(body.startDate);
   const end = new Date(body.endDate);
   const diffTime = Math.abs(end.getTime() - start.getTime());
@@ -72,7 +84,6 @@ router.post("/leave/requests", async (req, res) => {
     .values({ ...body, days: String(days) })
     .returning();
 
-  // Auto-update pending balance
   const year = new Date().getFullYear();
   const [existing] = await db
     .select()
@@ -130,7 +141,6 @@ router.post("/leave/requests/:id/approve", async (req, res) => {
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
 
-  // Move from pending → used in leave balance
   const year = new Date(existing.startDate).getFullYear();
   const days = existing.days ? Number(existing.days) : 0;
   if (days > 0) {
@@ -178,7 +188,6 @@ router.post("/leave/requests/:id/reject", async (req, res) => {
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
 
-  // Release pending balance back
   const year = new Date(existing.startDate).getFullYear();
   const days = existing.days ? Number(existing.days) : 0;
   if (days > 0) {
@@ -210,18 +219,26 @@ router.get("/leave/balances", async (req, res) => {
   if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
 
   const { employeeId } = ListLeaveBalancesQueryParams.parse(req.query);
-  const conditions = [];
-  if (employeeId) conditions.push(eq(leaveBalancesTable.employeeId, employeeId));
 
-  /* If companyId is set, ensure we only return balances for our company's employees */
-  const cid = user.companyId;
-  if (cid && !employeeId) {
-    const companyEmpIds = await db
-      .select({ id: employeesTable.id })
-      .from(employeesTable)
-      .where(eq(employeesTable.companyId, cid));
-    const ids = companyEmpIds.map((e) => e.id);
-    if (ids.length === 0) { res.json([]); return; }
+  /* Employees can only see their own balances */
+  const effectiveEmployeeId =
+    user.role === "employee" && user.employeeId ? user.employeeId : employeeId;
+
+  const conditions = [];
+  if (effectiveEmployeeId) {
+    conditions.push(eq(leaveBalancesTable.employeeId, effectiveEmployeeId));
+  } else {
+    /* Scope to company: fetch company employee IDs and use inArray */
+    const cid = user.companyId;
+    if (cid) {
+      const companyEmpRows = await db
+        .select({ id: employeesTable.id })
+        .from(employeesTable)
+        .where(eq(employeesTable.companyId, cid));
+      const ids = companyEmpRows.map((e) => e.id);
+      if (ids.length === 0) { res.json([]); return; }
+      conditions.push(inArray(leaveBalancesTable.employeeId, ids));
+    }
   }
 
   const balances = await db

@@ -7,17 +7,33 @@ import {
   ListBenefitEnrollmentsQueryParams,
   CreateBenefitEnrollmentBody,
 } from "@workspace/api-zod";
-import { getRequestUser } from "../lib/auth-helpers";
+import { getRequestUser, requireCompanyUser, requireNonEmployee } from "../lib/auth-helpers";
 
 const router = Router();
 
-router.get("/benefits/plans", async (_req, res) => {
-  const plans = await db.select().from(benefitPlansTable);
-  const enrollmentCounts = await db
-    .select({ planId: benefitEnrollmentsTable.planId, count: count() })
-    .from(benefitEnrollmentsTable)
-    .where(eq(benefitEnrollmentsTable.isActive, true))
-    .groupBy(benefitEnrollmentsTable.planId);
+/* ── Benefit Plans ── */
+
+router.get("/benefits/plans", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
+  const conditions = cid ? [eq(benefitPlansTable.companyId, cid)] : [];
+
+  const plans = await db
+    .select()
+    .from(benefitPlansTable)
+    .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+  const planIds = plans.map((p) => p.id);
+  const enrollmentCounts =
+    planIds.length > 0
+      ? await db
+          .select({ planId: benefitEnrollmentsTable.planId, count: count() })
+          .from(benefitEnrollmentsTable)
+          .where(eq(benefitEnrollmentsTable.isActive, true))
+          .groupBy(benefitEnrollmentsTable.planId)
+      : [];
 
   const countMap = new Map(enrollmentCounts.map((e) => [e.planId, Number(e.count)]));
 
@@ -32,8 +48,15 @@ router.get("/benefits/plans", async (_req, res) => {
 });
 
 router.post("/benefits/plans", async (req, res) => {
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
   const body = CreateBenefitPlanBody.parse(req.body);
-  const [plan] = await db.insert(benefitPlansTable).values(body).returning();
+  const [plan] = await db
+    .insert(benefitPlansTable)
+    .values({ ...body, companyId: user.companyId })
+    .returning();
+
   res.status(201).json({
     ...plan,
     employeeCost: Number(plan.employeeCost ?? 0),
@@ -42,6 +65,38 @@ router.post("/benefits/plans", async (req, res) => {
   });
 });
 
+router.patch("/benefits/plans/:id", async (req, res) => {
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
+  const id = Number(req.params.id);
+  const [updated] = await db
+    .update(benefitPlansTable)
+    .set(req.body)
+    .where(and(eq(benefitPlansTable.id, id), eq(benefitPlansTable.companyId, user.companyId)))
+    .returning();
+
+  if (!updated) return res.status(404).json({ error: "Not found" });
+  res.json({
+    ...updated,
+    employeeCost: Number(updated.employeeCost ?? 0),
+    employerCost: Number(updated.employerCost ?? 0),
+  });
+});
+
+router.delete("/benefits/plans/:id", async (req, res) => {
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
+  const id = Number(req.params.id);
+  await db
+    .delete(benefitPlansTable)
+    .where(and(eq(benefitPlansTable.id, id), eq(benefitPlansTable.companyId, user.companyId)));
+  res.status(204).send();
+});
+
+/* ── Benefit Enrollments ── */
+
 router.get("/benefits/enrollments", async (req, res) => {
   const user = getRequestUser(req);
   if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -49,8 +104,12 @@ router.get("/benefits/enrollments", async (req, res) => {
   const { employeeId, planId } = ListBenefitEnrollmentsQueryParams.parse(req.query);
   const cid = user.companyId;
 
+  /* Employees can only see their own enrollments */
+  const effectiveEmployeeId =
+    user.role === "employee" && user.employeeId ? user.employeeId : employeeId;
+
   const conditions = [];
-  if (employeeId) conditions.push(eq(benefitEnrollmentsTable.employeeId, employeeId));
+  if (effectiveEmployeeId) conditions.push(eq(benefitEnrollmentsTable.employeeId, effectiveEmployeeId));
   if (planId) conditions.push(eq(benefitEnrollmentsTable.planId, planId));
   if (cid) conditions.push(eq(employeesTable.companyId, cid));
 
@@ -80,12 +139,18 @@ router.get("/benefits/enrollments", async (req, res) => {
 });
 
 router.post("/benefits/enrollments", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const body = CreateBenefitEnrollmentBody.parse(req.body);
   const [enrollment] = await db.insert(benefitEnrollmentsTable).values(body).returning();
   res.status(201).json(enrollment);
 });
 
 router.delete("/benefits/enrollments/:id", async (req, res) => {
+  const user = requireNonEmployee(req, res);
+  if (!user) return;
+
   await db
     .update(benefitEnrollmentsTable)
     .set({ isActive: false })

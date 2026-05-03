@@ -45,9 +45,27 @@ pnpm --filter @workspace/api-server run build
 
 Every data endpoint is scoped to the authenticated user's `companyId` from the JWT. No user can read another company's data:
 - Employee-keyed tables (employees, departments): filtered by `employees.company_id = user.companyId`
-- Employee-linked tables (leave, time, benefits, expenses, onboarding, performance, training): joined to employees and filtered by `employees.company_id`
+- Employee-linked tables (leave, time, expenses, onboarding, performance, training, recruitment): joined to employees and filtered by `employees.company_id`
 - Payroll runs, announcements: have `company_id` column in DB, filtered directly
-- Auth helpers: `getRequestUser()`, `requireAuth()`, `requireCompanyUser()`, `requireNonEmployee()`, `requireRoles()`
+- Payroll stubs: always joined to `payroll_runs` table and filtered by `company_id` (both with and without `employeeId` query param)
+- `benefit_plans`, `courses`, `assets`: each has `company_id` column, filtered directly
+- Auth helpers: `getRequestUser()`, `requireAuth()`, `requireCompanyUser()`, `requireNonEmployee()`, `requireManagerOrAbove()`, `requireRoles()`
+
+### Employee Self-Service Scoping (RBAC)
+When `role === "employee"`, the API forces the `employeeId` filter to be the caller's own employee ID for:
+- `/api/time/entries` — employees see only their own entries
+- `/api/leave/requests` — employees see only their own requests
+- `/api/leave/balances` — employees see only their own balances
+- `/api/payroll/stubs` — employees see only their own pay stubs
+- `/api/expenses` — employees see only their own expense claims
+- `/api/performance/goals` — employees see only their own goals
+- `/api/performance/reviews` — employees see only their own reviews
+- `/api/onboarding/tasks` — employees see only their own tasks
+- `/api/training/enrollments` — employees see only their own enrollments
+- `/api/benefits/enrollments` — employees see only their own enrollments
+
+### JWT Payload
+The JWT now includes `employeeId` in addition to `{ id, email, name, role, companyId }`. This enables per-request employee scoping without extra DB round-trips. Re-login required after upgrade to get the new `employeeId` claim.
 
 ## Settings Persistence
 
@@ -86,15 +104,15 @@ Date formats: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, DD.MM.YYYY
 - `time_entries` — clock in/out with approval workflow; linked to employee (company isolation via join)
 - `leave_requests` — PTO/sick/personal with approval; linked to employee
 - `leave_balances` — allocated/used/pending per employee/year
-- `benefit_plans` — health, dental, vision, life, retirement
+- `benefit_plans` — health, dental, vision, life, retirement; has `company_id`
 - `benefit_enrollments` — employee plan membership
 - `onboarding_tasks` — grouped by employee with completion tracking
 - `announcements` — company-scoped; has `company_id`
 - `expense_claims` — per-employee expense with approval; linked to employee
-- `assets` — asset inventory; linked to assigned employee
-- `job_postings`, `applications` — recruitment pipeline
-- `goals`, `performance_reviews` — performance management
-- `courses`, `enrollments` — training/LMS
+- `assets` — asset inventory; has `company_id` (direct column, avoids LEFT JOIN scoping bug)
+- `job_postings`, `applications` — recruitment pipeline (scoped via department → company chain)
+- `goals`, `performance_reviews` — performance management; `performance_reviews` has `comments` and `review_date` columns
+- `courses`, `enrollments` — training/LMS; `courses` has `company_id` and `updated_at`
 
 ## Test Accounts
 

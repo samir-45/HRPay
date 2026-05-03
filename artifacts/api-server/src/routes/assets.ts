@@ -2,9 +2,20 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { assetsTable, employeesTable } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
-import { getRequestUser, requireNonEmployee } from "../lib/auth-helpers";
+import { getRequestUser, requireCompanyUser, requireNonEmployee } from "../lib/auth-helpers";
 
 const router = Router();
+
+function mapAsset(a: typeof assetsTable.$inferSelect & { employeeFirstName?: string | null; employeeLastName?: string | null }) {
+  return {
+    ...a,
+    purchaseCost: a.purchaseCost ? Number(a.purchaseCost) : null,
+    assignedToName:
+      a.employeeFirstName && a.employeeLastName
+        ? `${a.employeeFirstName} ${a.employeeLastName}`
+        : null,
+  };
+}
 
 router.get("/assets", async (req, res) => {
   const user = getRequestUser(req);
@@ -12,9 +23,12 @@ router.get("/assets", async (req, res) => {
 
   const cid = user.companyId;
 
+  /* Use companyId column directly — avoids the LEFT JOIN bug where unassigned
+     assets (no employee) would be excluded by the employee companyId filter */
   const assets = await db
     .select({
       id: assetsTable.id,
+      companyId: assetsTable.companyId,
       name: assetsTable.name,
       category: assetsTable.category,
       brand: assetsTable.brand,
@@ -33,62 +47,94 @@ router.get("/assets", async (req, res) => {
     })
     .from(assetsTable)
     .leftJoin(employeesTable, eq(assetsTable.assignedTo, employeesTable.id))
-    .where(cid ? eq(employeesTable.companyId, cid) : undefined)
+    .where(cid ? eq(assetsTable.companyId, cid) : undefined)
     .orderBy(desc(assetsTable.createdAt));
 
-  res.json(
-    assets.map((a) => ({
-      ...a,
-      purchaseCost: a.purchaseCost ? Number(a.purchaseCost) : null,
-      assignedToName:
-        a.employeeFirstName && a.employeeLastName
-          ? `${a.employeeFirstName} ${a.employeeLastName}`
-          : null,
-    }))
-  );
+  res.json(assets.map(mapAsset));
 });
 
 router.get("/assets/:id", async (req, res) => {
-  const [asset] = await db
-    .select()
-    .from(assetsTable)
-    .where(eq(assetsTable.id, Number(req.params.id)));
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
+  const id = Number(req.params.id);
+
+  const conditions = [eq(assetsTable.id, id)];
+  if (cid) conditions.push(eq(assetsTable.companyId, cid));
+
+  const [asset] = await db.select().from(assetsTable).where(and(...conditions));
   if (!asset) return res.status(404).json({ error: "Not found" });
   res.json({ ...asset, purchaseCost: asset.purchaseCost ? Number(asset.purchaseCost) : null });
 });
 
 router.post("/assets", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
 
-  const { name, category, brand, model, serialNumber, purchaseDate, purchaseCost, status, location, warrantyExpiry, notes } = req.body as {
-    name?: string; category?: string; brand?: string; model?: string; serialNumber?: string;
-    purchaseDate?: string; purchaseCost?: number | string; status?: string;
-    location?: string; warrantyExpiry?: string; notes?: string;
+  if (user.role === "employee") {
+    res.status(403).json({ error: "Insufficient permissions" });
+    return;
+  }
+
+  const {
+    name, category, brand, model, serialNumber, purchaseDate,
+    purchaseCost, status, location, warrantyExpiry, notes,
+  } = req.body as {
+    name?: string; category?: string; brand?: string; model?: string;
+    serialNumber?: string; purchaseDate?: string; purchaseCost?: number | string;
+    status?: string; location?: string; warrantyExpiry?: string; notes?: string;
   };
 
   if (!name) return res.status(400).json({ error: "name is required" });
 
   const [asset] = await db
     .insert(assetsTable)
-    .values({ name, category: category ?? "other", brand, model, serialNumber, purchaseDate, purchaseCost: purchaseCost ? String(purchaseCost) : undefined, status: status ?? "available", location, warrantyExpiry, notes })
+    .values({
+      companyId: user.companyId,
+      name,
+      category: category ?? "other",
+      brand,
+      model,
+      serialNumber,
+      purchaseDate,
+      purchaseCost: purchaseCost ? String(purchaseCost) : undefined,
+      status: status ?? "available",
+      location,
+      warrantyExpiry,
+      notes,
+    })
     .returning();
+
   res.status(201).json({ ...asset, purchaseCost: asset.purchaseCost ? Number(asset.purchaseCost) : null });
 });
 
 router.patch("/assets/:id", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
+  if (user.role === "employee") {
+    res.status(403).json({ error: "Insufficient permissions" });
+    return;
+  }
 
   const [updated] = await db
     .update(assetsTable)
     .set({ ...req.body, updatedAt: new Date() })
-    .where(eq(assetsTable.id, Number(req.params.id)))
+    .where(and(eq(assetsTable.id, Number(req.params.id)), eq(assetsTable.companyId, user.companyId)))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
   res.json({ ...updated, purchaseCost: updated.purchaseCost ? Number(updated.purchaseCost) : null });
 });
 
 router.patch("/assets/:id/assign", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
+  if (user.role === "employee") {
+    res.status(403).json({ error: "Insufficient permissions" });
+    return;
+  }
 
   const { employeeId } = req.body as { employeeId?: number | null };
   const id = Number(req.params.id);
@@ -107,15 +153,24 @@ router.patch("/assets/:id/assign", async (req, res) => {
   const [updated] = await db
     .update(assetsTable)
     .set(updates)
-    .where(eq(assetsTable.id, id))
+    .where(and(eq(assetsTable.id, id), eq(assetsTable.companyId, user.companyId)))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
   res.json({ ...updated, purchaseCost: updated.purchaseCost ? Number(updated.purchaseCost) : null });
 });
 
 router.delete("/assets/:id", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
-  await db.delete(assetsTable).where(eq(assetsTable.id, Number(req.params.id)));
+  const user = requireCompanyUser(req, res);
+  if (!user) return;
+
+  if (user.role === "employee") {
+    res.status(403).json({ error: "Insufficient permissions" });
+    return;
+  }
+
+  await db
+    .delete(assetsTable)
+    .where(and(eq(assetsTable.id, Number(req.params.id)), eq(assetsTable.companyId, user.companyId)));
   res.status(204).send();
 });
 

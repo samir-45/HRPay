@@ -41,8 +41,14 @@ router.get("/time/entries", async (req, res) => {
     ? and(eq(timeEntriesTable.employeeId, employeesTable.id), eq(employeesTable.companyId, cid))
     : eq(timeEntriesTable.employeeId, employeesTable.id);
 
+  /* Employees can only view their own time entries */
+  const effectiveEmployeeId =
+    user.role === "employee" && user.employeeId
+      ? user.employeeId
+      : q.employeeId ? Number(q.employeeId) : undefined;
+
   const conditions = [];
-  if (q.employeeId) conditions.push(eq(timeEntriesTable.employeeId, Number(q.employeeId)));
+  if (effectiveEmployeeId) conditions.push(eq(timeEntriesTable.employeeId, effectiveEmployeeId));
   if (q.status) conditions.push(eq(timeEntriesTable.status, q.status));
   if (q.startDate) conditions.push(gte(timeEntriesTable.date, q.startDate));
   if (q.endDate) conditions.push(lte(timeEntriesTable.date, q.endDate));

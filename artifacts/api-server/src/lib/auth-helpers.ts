@@ -9,6 +9,7 @@ export interface RequestUser {
   name: string;
   role: string;
   companyId: number | null;
+  employeeId?: number | null;
 }
 
 declare global {
@@ -72,6 +73,21 @@ export function requireNonEmployee(req: Request, res: Response): RequestUser | n
   return user;
 }
 
+/* ── Guard: require manager or above (company_admin, hr, manager) ── */
+export function requireManagerOrAbove(req: Request, res: Response): RequestUser | null {
+  const user = getRequestUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Not authenticated" });
+    return null;
+  }
+  const allowed = ["company_admin", "hr", "manager", "super_admin"];
+  if (!allowed.includes(user.role)) {
+    res.status(403).json({ error: "Manager or above access required" });
+    return null;
+  }
+  return user;
+}
+
 /* ── Guard: require specific roles ── */
 export function requireRoles(req: Request, res: Response, roles: string[]): RequestUser | null {
   const user = getRequestUser(req);
@@ -84,4 +100,9 @@ export function requireRoles(req: Request, res: Response, roles: string[]): Requ
     return null;
   }
   return user;
+}
+
+/* ── Helper: returns true if user is manager-level or above ── */
+export function isManagerOrAbove(role: string): boolean {
+  return ["company_admin", "hr", "manager", "super_admin"].includes(role);
 }

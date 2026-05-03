@@ -30,6 +30,8 @@ export const performanceReviewsTable = pgTable("performance_reviews", {
   peerFeedback: text("peer_feedback"),
   strengths: text("strengths"),
   improvements: text("improvements"),
+  comments: text("comments"),
+  reviewDate: date("review_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

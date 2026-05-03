@@ -1,9 +1,11 @@
 import { pgTable, serial, text, numeric, integer, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { companiesTable } from "./companies";
 
 export const assetsTable = pgTable("assets", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companiesTable.id),
   name: text("name").notNull(),
   category: text("category").notNull().default("other"),
   brand: text("brand"),
@@ -18,8 +20,9 @@ export const assetsTable = pgTable("assets", {
   warrantyExpiry: date("warranty_expiry"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertAssetSchema = createInsertSchema(assetsTable).omit({ id: true, createdAt: true });
+export const insertAssetSchema = createInsertSchema(assetsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertAsset = z.infer<typeof insertAssetSchema>;
 export type Asset = typeof assetsTable.$inferSelect;
