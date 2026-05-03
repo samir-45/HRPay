@@ -296,6 +296,7 @@ export default function Time() {
   const [weekOffset, setWeekOffset] = useState(0);
   const monday = useMemo(() => addDays(getMondayOf(new Date()), weekOffset * 7), [weekOffset]);
   const sunday = useMemo(() => addDays(monday, 6), [monday]);
+  // Use Monday as start and include all of Sunday (don't subtract a day)
   const startDate = toISO(monday);
   const endDate = toISO(sunday);
   const isCurrentWeek = weekOffset === 0;
@@ -332,11 +333,19 @@ export default function Time() {
 
   /* Mutations */
   const invalidate = () => {
-    // Invalidate all time entries queries - React Query will auto-refetch marked as stale
-    qc.invalidateQueries({ 
-      queryKey: ["/api/time/entries"],
-      refetchType: "active" // Only refetch active queries
-    });
+    // Invalidate all time entries queries and force refetch
+    qc.invalidateQueries({ queryKey: ["/api/time/entries"] });
+    // Refetch with fresh parameters to bypass any caching
+    setTimeout(() => {
+      qc.refetchQueries({ 
+        queryKey: getListTimeEntriesQueryKey(baseParams),
+        type: "active"
+      });
+      qc.refetchQueries({ 
+        queryKey: getListTimeEntriesQueryKey(allWeekParams),
+        type: "active"
+      });
+    }, 0);
   };
 
   const approveMut = useApproveTimeEntry({
