@@ -231,7 +231,8 @@ router.get("/analytics/leave-summary", async (req, res) => {
     for (const st of statuses) {
       byStatus[st] = Number(rows.find((r) => r.type === type && r.status === st)?.count ?? 0);
     }
-    return { type, ...byStatus, total: Object.values(byStatus).reduce((a, b) => a + b, 0) };
+    const count = Object.values(byStatus).reduce((a, b) => a + b, 0);
+    return { type, count, ...byStatus };
   });
 
   res.json(result);
