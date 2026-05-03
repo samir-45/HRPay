@@ -253,8 +253,9 @@ export interface TimeEntry {
 export interface CreateTimeEntryBody {
   employeeId: number;
   date: string;
-  clockIn: string;
+  clockIn?: string;
   clockOut?: string;
+  hoursWorked?: number;
   notes?: string;
 }
 
@@ -580,6 +581,18 @@ export const ListTimeEntriesStatus = {
   approved: "approved",
   rejected: "rejected",
 } as const;
+
+export type RejectTimeEntryBody = {
+  reason?: string;
+};
+
+export type BulkApproveTimeEntriesBody = {
+  ids: number[];
+};
+
+export type BulkApproveTimeEntries200 = {
+  count?: number;
+};
 
 export type ListLeaveRequestsParams = {
   employeeId?: number;

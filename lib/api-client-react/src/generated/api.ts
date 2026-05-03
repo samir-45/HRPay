@@ -19,6 +19,8 @@ import type {
 import type {
   BenefitEnrollment,
   BenefitPlan,
+  BulkApproveTimeEntries200,
+  BulkApproveTimeEntriesBody,
   CreateBenefitEnrollmentBody,
   CreateBenefitPlanBody,
   CreateDepartmentBody,
@@ -50,6 +52,7 @@ import type {
   PayStub,
   PayrollRun,
   PayrollTrend,
+  RejectTimeEntryBody,
   TimeEntry,
   UpdateEmployeeBody,
 } from "./api.schemas";
@@ -1615,6 +1618,183 @@ export const useApproveTimeEntry = <
   TContext
 > => {
   return useMutation(getApproveTimeEntryMutationOptions(options));
+};
+
+/**
+ * @summary Reject a time entry
+ */
+export const getRejectTimeEntryUrl = (id: number) => {
+  return `/api/time/entries/${id}/reject`;
+};
+
+export const rejectTimeEntry = async (
+  id: number,
+  rejectTimeEntryBody: RejectTimeEntryBody,
+  options?: RequestInit,
+): Promise<TimeEntry> => {
+  return customFetch<TimeEntry>(getRejectTimeEntryUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(rejectTimeEntryBody),
+  });
+};
+
+export const getRejectTimeEntryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectTimeEntry>>,
+    TError,
+    { id: number; data: BodyType<RejectTimeEntryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectTimeEntry>>,
+  TError,
+  { id: number; data: BodyType<RejectTimeEntryBody> },
+  TContext
+> => {
+  const mutationKey = ["rejectTimeEntry"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectTimeEntry>>,
+    { id: number; data: BodyType<RejectTimeEntryBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rejectTimeEntry(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectTimeEntryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectTimeEntry>>
+>;
+export type RejectTimeEntryMutationBody = BodyType<RejectTimeEntryBody>;
+export type RejectTimeEntryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reject a time entry
+ */
+export const useRejectTimeEntry = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectTimeEntry>>,
+    TError,
+    { id: number; data: BodyType<RejectTimeEntryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rejectTimeEntry>>,
+  TError,
+  { id: number; data: BodyType<RejectTimeEntryBody> },
+  TContext
+> => {
+  return useMutation(getRejectTimeEntryMutationOptions(options));
+};
+
+/**
+ * @summary Bulk approve multiple time entries
+ */
+export const getBulkApproveTimeEntriesUrl = () => {
+  return `/api/time/entries/bulk-approve`;
+};
+
+export const bulkApproveTimeEntries = async (
+  bulkApproveTimeEntriesBody: BulkApproveTimeEntriesBody,
+  options?: RequestInit,
+): Promise<BulkApproveTimeEntries200> => {
+  return customFetch<BulkApproveTimeEntries200>(
+    getBulkApproveTimeEntriesUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(bulkApproveTimeEntriesBody),
+    },
+  );
+};
+
+export const getBulkApproveTimeEntriesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkApproveTimeEntries>>,
+    TError,
+    { data: BodyType<BulkApproveTimeEntriesBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bulkApproveTimeEntries>>,
+  TError,
+  { data: BodyType<BulkApproveTimeEntriesBody> },
+  TContext
+> => {
+  const mutationKey = ["bulkApproveTimeEntries"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bulkApproveTimeEntries>>,
+    { data: BodyType<BulkApproveTimeEntriesBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bulkApproveTimeEntries(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BulkApproveTimeEntriesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bulkApproveTimeEntries>>
+>;
+export type BulkApproveTimeEntriesMutationBody =
+  BodyType<BulkApproveTimeEntriesBody>;
+export type BulkApproveTimeEntriesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Bulk approve multiple time entries
+ */
+export const useBulkApproveTimeEntries = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkApproveTimeEntries>>,
+    TError,
+    { data: BodyType<BulkApproveTimeEntriesBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bulkApproveTimeEntries>>,
+  TError,
+  { data: BodyType<BulkApproveTimeEntriesBody> },
+  TContext
+> => {
+  return useMutation(getBulkApproveTimeEntriesMutationOptions(options));
 };
 
 /**

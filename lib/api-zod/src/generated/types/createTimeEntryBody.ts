@@ -9,7 +9,8 @@
 export interface CreateTimeEntryBody {
   employeeId: number;
   date: Date;
-  clockIn: Date;
+  clockIn?: Date;
   clockOut?: Date;
+  hoursWorked?: number;
   notes?: string;
 }

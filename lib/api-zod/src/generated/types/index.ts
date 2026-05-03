@@ -9,6 +9,8 @@
 export * from "./benefitEnrollment";
 export * from "./benefitPlan";
 export * from "./benefitPlanType";
+export * from "./bulkApproveTimeEntries200";
+export * from "./bulkApproveTimeEntriesBody";
 export * from "./createBenefitEnrollmentBody";
 export * from "./createBenefitPlanBody";
 export * from "./createBenefitPlanBodyType";
@@ -61,6 +63,7 @@ export * from "./payrollRun";
 export * from "./payrollRunStatus";
 export * from "./payrollTrend";
 export * from "./payStub";
+export * from "./rejectTimeEntryBody";
 export * from "./timeEntry";
 export * from "./timeEntryStatus";
 export * from "./updateEmployeeBody";

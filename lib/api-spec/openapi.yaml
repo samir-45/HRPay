@@ -395,6 +395,62 @@ paths:
               schema:
                 $ref: "#/components/schemas/TimeEntry"
 
+  /time/entries/{id}/reject:
+    post:
+      operationId: rejectTimeEntry
+      tags: [timeTracking]
+      summary: Reject a time entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+
+  /time/entries/bulk-approve:
+    post:
+      operationId: bulkApproveTimeEntries
+      tags: [timeTracking]
+      summary: Bulk approve multiple time entries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: integer
+              required:
+                - ids
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
   # --- LEAVE ---
   /leave/requests:
     get:
@@ -1092,12 +1148,13 @@ components:
         clockOut:
           type: string
           format: date-time
+        hoursWorked:
+          type: number
         notes:
           type: string
       required:
         - employeeId
         - date
-        - clockIn
 
     LeaveRequest:
       type: object

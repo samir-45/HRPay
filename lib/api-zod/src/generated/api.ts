@@ -395,8 +395,9 @@ export const ListTimeEntriesResponse = zod.array(ListTimeEntriesResponseItem);
 export const CreateTimeEntryBody = zod.object({
   employeeId: zod.number(),
   date: zod.coerce.date(),
-  clockIn: zod.coerce.date(),
+  clockIn: zod.coerce.date().optional(),
   clockOut: zod.coerce.date().optional(),
+  hoursWorked: zod.number().optional(),
   notes: zod.string().optional(),
 });
 
@@ -419,6 +420,42 @@ export const ApproveTimeEntryResponse = zod.object({
   notes: zod.string().optional(),
   status: zod.enum(["pending", "approved", "rejected"]),
   createdAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Reject a time entry
+ */
+export const RejectTimeEntryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RejectTimeEntryBody = zod.object({
+  reason: zod.string().optional(),
+});
+
+export const RejectTimeEntryResponse = zod.object({
+  id: zod.number(),
+  employeeId: zod.number(),
+  employeeName: zod.string().optional(),
+  date: zod.coerce.date(),
+  clockIn: zod.coerce.date().optional(),
+  clockOut: zod.coerce.date().optional(),
+  hoursWorked: zod.number().optional(),
+  overtimeHours: zod.number().optional(),
+  notes: zod.string().optional(),
+  status: zod.enum(["pending", "approved", "rejected"]),
+  createdAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Bulk approve multiple time entries
+ */
+export const BulkApproveTimeEntriesBody = zod.object({
+  ids: zod.array(zod.number()),
+});
+
+export const BulkApproveTimeEntriesResponse = zod.object({
+  count: zod.number().optional(),
 });
 
 /**
