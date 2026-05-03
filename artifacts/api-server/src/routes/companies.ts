@@ -7,6 +7,7 @@ import { eq, desc, and, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { sendInviteEmail } from "../lib/mailer.js";
 
 const router = Router();
 const JWT_SECRET = process.env["SESSION_SECRET"] ?? "hrpay-secret-dev";
@@ -184,6 +185,22 @@ router.post("/companies/invite", async (req, res) => {
     companyId: user.companyId, email: email.toLowerCase(), name, role,
     token, tempPassword, status: "pending", invitedBy: user.id, expiresAt,
   }).returning();
+
+  // Send email asynchronously — never block the response on it
+  const [company] = await db.select({ name: companiesTable.name }).from(companiesTable).where(eq(companiesTable.id, user.companyId));
+  const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",");
+  const appDomain = domains[0]?.trim() || "localhost";
+  const loginUrl = `https://${appDomain}/login`;
+
+  sendInviteEmail({
+    toEmail: email.toLowerCase(),
+    toName: name,
+    companyName: company?.name ?? "Your Company",
+    tempPassword,
+    loginUrl,
+    invitedByName: user.name,
+    role,
+  }).catch(() => { /* email failure never breaks the invite */ });
 
   res.status(201).json({ invitation, tempPassword, acceptUrl: `/accept-invite?token=${token}` });
 });
