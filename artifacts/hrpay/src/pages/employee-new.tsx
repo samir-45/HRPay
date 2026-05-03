@@ -5,6 +5,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
+function Field({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-foreground mb-1.5">
+        {label}{required && <span className="text-destructive ml-0.5">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
 export default function EmployeeNew() {
   const [, navigate] = useLocation();
   const qc = useQueryClient();
@@ -36,13 +47,6 @@ export default function EmployeeNew() {
       salary: form.salary || undefined,
     } as any);
   };
-
-  const Field = ({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) => (
-    <div>
-      <label className="block text-sm font-medium text-foreground mb-1.5">{label}{required && <span className="text-destructive ml-0.5">*</span>}</label>
-      {children}
-    </div>
-  );
 
   const inputCls = "w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20";
 
