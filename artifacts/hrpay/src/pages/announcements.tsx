@@ -24,19 +24,19 @@ export default function Announcements() {
 
   const create = useMutation({
     mutationFn: () => fetch(`${API}/announcements`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(form) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["announcements"] }); setShowForm(false); setForm({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" }); },
+    onSuccess: () => { toast.success("Announcement published successfully"); qc.invalidateQueries({ queryKey: ["announcements"] }); setShowForm(false); setForm({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" }); },
     onError: () => toast.error("Failed to create announcement", { description: "Please check your input and try again." }),
   });
 
   const remove = useMutation({
     mutationFn: (id: number) => fetch(`${API}/announcements/${id}`, { method: "DELETE", headers: apiHeaders(token) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements"] }),
+    onSuccess: () => { toast.success("Announcement deleted successfully"); qc.invalidateQueries({ queryKey: ["announcements"] }); },
     onError: () => toast.error("Failed to delete announcement", { description: "Please try again." }),
   });
 
   const pin = useMutation({
     mutationFn: ({ id, isPinned }: { id: number; isPinned: boolean }) => fetch(`${API}/announcements/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ isPinned }) }).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements"] }),
+    onSuccess: () => { toast.success("Announcement updated successfully"); qc.invalidateQueries({ queryKey: ["announcements"] }); },
     onError: () => toast.error("Failed to update announcement", { description: "Please try again." }),
   });
 

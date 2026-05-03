@@ -69,7 +69,7 @@ export default function Assets() {
 
   const create = useMutation({
     mutationFn: () => fetch(`${API}/assets`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ ...form, purchaseCost: form.purchaseCost ? parseFloat(form.purchaseCost) : undefined }) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["assets"] }); setShowForm(false); setForm({ ...emptyForm }); },
+    onSuccess: () => { toast.success("Asset created successfully"); qc.invalidateQueries({ queryKey: ["assets"] }); setShowForm(false); setForm({ ...emptyForm }); },
     onError: () => toast.error("Failed to create asset", { description: "Please check your input and try again." }),
   });
 
@@ -78,7 +78,7 @@ export default function Assets() {
       const { id, ...rest } = data;
       return fetch(`${API}/assets/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify(rest) }).then(r => r.json());
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["assets"] }); setEditing(null); setAssigning(null); },
+    onSuccess: () => { toast.success("Asset updated successfully"); qc.invalidateQueries({ queryKey: ["assets"] }); setEditing(null); setAssigning(null); },
     onError: () => toast.error("Failed to update asset", { description: "Please try again." }),
   });
 

@@ -73,20 +73,20 @@ export default function Training() {
 
   const createCourse = useMutation({
     mutationFn: () => fetch(`${API}/training/courses`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(courseForm) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["courses"] }); setShowCourseForm(false); setCourseForm({ title: "", description: "", category: "general", durationHours: "", instructor: "", provider: "", isRequired: false }); },
+    onSuccess: () => { toast.success("Course created successfully"); qc.invalidateQueries({ queryKey: ["courses"] }); setShowCourseForm(false); setCourseForm({ title: "", description: "", category: "general", durationHours: "", instructor: "", provider: "", isRequired: false }); },
     onError: () => toast.error("Failed to create course", { description: "Please check your input and try again." }),
   });
 
   const createEnrollment = useMutation({
     mutationFn: () => fetch(`${API}/training/enrollments`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(enrollForm) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["enrollments"] }); setShowEnrollForm(false); setEnrollForm({ courseId: "", employeeId: myEmployeeId ? String(myEmployeeId) : "" }); },
+    onSuccess: () => { toast.success("Enrollment created successfully"); qc.invalidateQueries({ queryKey: ["enrollments"] }); setShowEnrollForm(false); setEnrollForm({ courseId: "", employeeId: myEmployeeId ? String(myEmployeeId) : "" }); },
     onError: () => toast.error("Failed to enroll in course", { description: "Please try again." }),
   });
 
   const updateEnrollment = useMutation({
     mutationFn: ({ id, status, progress }: { id: number; status?: string; progress?: number }) =>
       fetch(`${API}/training/enrollments/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ status, progress }) }).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["enrollments"] }),
+    onSuccess: () => { toast.success("Enrollment updated successfully"); qc.invalidateQueries({ queryKey: ["enrollments"] }); },
     onError: () => toast.error("Failed to update enrollment", { description: "Please try again." }),
   });
 

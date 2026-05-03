@@ -34,17 +34,17 @@ export default function Performance() {
 
   const createGoal = useMutation({
     mutationFn: (body: typeof newGoal) => fetch(`${API}/performance/goals`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ ...body, employeeId: Number(body.employeeId), progress: Number(body.progress) }) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["goals"] }); setShowGoalForm(false); },
+    onSuccess: () => { toast.success("Goal created successfully"); qc.invalidateQueries({ queryKey: ["goals"] }); setShowGoalForm(false); },
     onError: () => toast.error("Failed to create goal", { description: "Please try again." }),
   });
   const createReview = useMutation({
     mutationFn: (body: typeof newReview) => fetch(`${API}/performance/reviews`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ ...body, employeeId: Number(body.employeeId), overallRating: body.overallRating || null }) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["reviews"] }); setShowReviewForm(false); },
+    onSuccess: () => { toast.success("Performance review created successfully"); qc.invalidateQueries({ queryKey: ["reviews"] }); setShowReviewForm(false); },
     onError: () => toast.error("Failed to create review", { description: "Please try again." }),
   });
   const updateGoalProgress = useMutation({
     mutationFn: ({ id, progress }: { id: number; progress: number }) => fetch(`${API}/performance/goals/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ progress }) }).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["goals"] }),
+    onSuccess: () => { toast.success("Goal progress updated successfully"); qc.invalidateQueries({ queryKey: ["goals"] }); },
     onError: () => toast.error("Failed to update goal", { description: "Please try again." }),
   });
 

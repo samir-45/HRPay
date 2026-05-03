@@ -61,11 +61,12 @@ export default function Leave() {
     query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
   });
 
-  const approveMut = useApproveLeaveRequest({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }), onError: () => toast.error("Failed to approve leave", { description: "Please try again." }) } });
-  const rejectMut = useRejectLeaveRequest({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }), onError: () => toast.error("Failed to reject leave", { description: "Please try again." }) } });
+  const approveMut = useApproveLeaveRequest({ mutation: { onSuccess: () => { toast.success("Leave approved successfully"); qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }); }, onError: () => toast.error("Failed to approve leave", { description: "Please try again." }) } });
+  const rejectMut = useRejectLeaveRequest({ mutation: { onSuccess: () => { toast.success("Leave rejected successfully"); qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }); }, onError: () => toast.error("Failed to reject leave", { description: "Please try again." }) } });
   const createMut = useCreateLeaveRequest({
     mutation: {
       onSuccess: () => {
+        toast.success("Leave request submitted successfully");
         qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) });
         setShowModal(false);
         setForm({ employeeId: myEmployeeId ? String(myEmployeeId) : "", type: "vacation", startDate: "", endDate: "", reason: "" });

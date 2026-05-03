@@ -41,10 +41,11 @@ export default function Onboarding() {
     query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
   });
 
-  const completeMut = useCompleteOnboardingTask({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListOnboardingTasksQueryKey({}) }), onError: () => toast.error("Failed to complete task", { description: "Please try again." }) } });
+  const completeMut = useCompleteOnboardingTask({ mutation: { onSuccess: () => { toast.success("Task completed successfully"); qc.invalidateQueries({ queryKey: getListOnboardingTasksQueryKey({}) }); }, onError: () => toast.error("Failed to complete task", { description: "Please try again." }) } });
   const createMut = useCreateOnboardingTask({
     mutation: {
       onSuccess: () => {
+        toast.success("Onboarding task created successfully");
         qc.invalidateQueries({ queryKey: getListOnboardingTasksQueryKey({}) });
         setShowModal(false);
         setForm({ employeeId: "", title: "", description: "", category: "documentation", dueDate: "", priority: "medium", assignedTo: "" });

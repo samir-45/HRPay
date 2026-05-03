@@ -47,8 +47,8 @@ export default function Benefits() {
     query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
   });
 
-  const createPlanMut = useCreateBenefitPlan({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListBenefitPlansQueryKey() }); setShowPlanModal(false); }, onError: () => toast.error("Failed to create benefit plan", { description: "Please check your input and try again." }) } });
-  const createEnrollMut = useCreateBenefitEnrollment({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListBenefitEnrollmentsQueryKey({}) }); setShowEnrollModal(false); }, onError: () => toast.error("Failed to enroll in plan", { description: "Please try again." }) } });
+  const createPlanMut = useCreateBenefitPlan({ mutation: { onSuccess: () => { toast.success("Benefit plan created successfully"); qc.invalidateQueries({ queryKey: getListBenefitPlansQueryKey() }); setShowPlanModal(false); }, onError: () => toast.error("Failed to create benefit plan", { description: "Please check your input and try again." }) } });
+  const createEnrollMut = useCreateBenefitEnrollment({ mutation: { onSuccess: () => { toast.success("Enrollment created successfully"); qc.invalidateQueries({ queryKey: getListBenefitEnrollmentsQueryKey({}) }); setShowEnrollModal(false); }, onError: () => toast.error("Failed to enroll in plan", { description: "Please try again." }) } });
 
   const setP = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setPlanForm(f => ({ ...f, [k]: e.target.value }));
   const setE = (k: string) => (e: React.ChangeEvent<HTMLSelectElement>) => setEnrollForm(f => ({ ...f, [k]: e.target.value }));

@@ -28,7 +28,7 @@ export default function Payroll() {
   const { hasPower } = usePermissions();
   const canProcess = hasPower("process_payroll");
   const { data: runs, isLoading } = useListPayrollRuns({}, { query: { queryKey: getListPayrollRunsQueryKey({}) } });
-  const createMut = useCreatePayrollRun({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListPayrollRunsQueryKey({}) }), onError: () => toast.error("Failed to create payroll run", { description: "Please check your input and try again." }) } });
+  const createMut = useCreatePayrollRun({ mutation: { onSuccess: () => { toast.success("Payroll run created successfully"); qc.invalidateQueries({ queryKey: getListPayrollRunsQueryKey({}) }); }, onError: () => toast.error("Failed to create payroll run", { description: "Please check your input and try again." }) } });
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: "", periodStart: "", periodEnd: "", payDate: "", notes: "" });
 
