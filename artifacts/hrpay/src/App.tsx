@@ -5,7 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout";
 import { AuthProvider, useAuth } from "@/components/auth-context";
-import { PermissionsProvider } from "@/components/permissions-context";
+import { PermissionsProvider, usePermissions } from "@/components/permissions-context";
+import type { FeatureKey } from "@/components/permissions-context";
 import { SubscriptionProvider } from "@/components/subscription-context";
 import { AIAssistant } from "@/components/ai-assistant";
 import NotFound from "@/pages/not-found";
@@ -54,11 +55,30 @@ function LoadingScreen() {
   );
 }
 
-function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType; allowedRoles?: string[] }) {
-  const { user, isLoading } = useAuth();
-  if (isLoading) return <LoadingScreen />;
+function ProtectedRoute({
+  component: Component,
+  allowedRoles,
+  feature,
+}: {
+  component: React.ComponentType;
+  allowedRoles?: string[];
+  feature?: FeatureKey;
+}) {
+  const { user, isLoading: authLoading } = useAuth();
+  const { hasFeature, isLoading: permsLoading } = usePermissions();
+
+  // Wait for both auth and permissions to finish loading
+  if (authLoading || permsLoading) return <LoadingScreen />;
+
+  // Must be logged in
   if (!user) return <Redirect to="/login" />;
+
+  // Role gate (hard-coded role restrictions like company_admin-only pages)
   if (allowedRoles && !allowedRoles.includes(user.role)) return <Redirect to="/dashboard" />;
+
+  // Feature gate: non-admin roles are checked against company permission matrix
+  if (feature && !hasFeature(feature)) return <Redirect to="/dashboard" />;
+
   return (
     <AppLayout>
       <Component />
@@ -94,28 +114,33 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/dashboard"   component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/upgrade"     component={() => <ProtectedRoute component={Upgrade} />} />
+      <Route path="/settings"    component={() => <ProtectedRoute component={Settings} />} />
+      <Route path="/help"        component={() => <ProtectedRoute component={Help} />} />
+
+      {/* Admin-only — role gate, no feature gate */}
       <Route path="/permissions" component={() => <ProtectedRoute component={Permissions} allowedRoles={["company_admin"]} />} />
-      <Route path="/team"        component={() => <ProtectedRoute component={TeamManagement} allowedRoles={["company_admin", "ceoo", "super_admin", "manager"]} />} />
-      <Route path="/employees/new"  component={() => <ProtectedRoute component={EmployeeNew} />} />
-      <Route path="/employees/:id"  component={() => <ProtectedRoute component={EmployeeProfile} />} />
-      <Route path="/employees"      component={() => <ProtectedRoute component={Employees} />} />
-      <Route path="/payroll/:id"    component={() => <ProtectedRoute component={PayrollDetail} />} />
-      <Route path="/payroll"        component={() => <ProtectedRoute component={Payroll} />} />
-      <Route path="/time"           component={() => <ProtectedRoute component={Time} />} />
-      <Route path="/leave"          component={() => <ProtectedRoute component={Leave} />} />
-      <Route path="/benefits"       component={() => <ProtectedRoute component={Benefits} />} />
-      <Route path="/onboarding"     component={() => <ProtectedRoute component={Onboarding} />} />
-      <Route path="/departments"    component={() => <ProtectedRoute component={Departments} />} />
-      <Route path="/recruitment"    component={() => <ProtectedRoute component={Recruitment} />} />
-      <Route path="/performance"    component={() => <ProtectedRoute component={Performance} />} />
-      <Route path="/reports"        component={() => <ProtectedRoute component={Reports} />} />
-      <Route path="/settings"       component={() => <ProtectedRoute component={Settings} />} />
-      <Route path="/announcements"  component={() => <ProtectedRoute component={Announcements} />} />
-      <Route path="/expenses"       component={() => <ProtectedRoute component={Expenses} />} />
-      <Route path="/assets"         component={() => <ProtectedRoute component={Assets} />} />
-      <Route path="/training"       component={() => <ProtectedRoute component={Training} />} />
-      <Route path="/org-chart"      component={() => <ProtectedRoute component={OrgChart} />} />
-      <Route path="/help"           component={() => <ProtectedRoute component={Help} />} />
+      <Route path="/team"        component={() => <ProtectedRoute component={TeamManagement} allowedRoles={["company_admin", "ceoo", "super_admin", "manager"]} feature="team" />} />
+
+      {/* Feature-gated routes — redirect to /dashboard if role doesn't have feature */}
+      <Route path="/employees/new"  component={() => <ProtectedRoute component={EmployeeNew}     feature="employees" />} />
+      <Route path="/employees/:id"  component={() => <ProtectedRoute component={EmployeeProfile} feature="employees" />} />
+      <Route path="/employees"      component={() => <ProtectedRoute component={Employees}       feature="employees" />} />
+      <Route path="/payroll/:id"    component={() => <ProtectedRoute component={PayrollDetail}   feature="payroll" />} />
+      <Route path="/payroll"        component={() => <ProtectedRoute component={Payroll}         feature="payroll" />} />
+      <Route path="/time"           component={() => <ProtectedRoute component={Time}            feature="time" />} />
+      <Route path="/leave"          component={() => <ProtectedRoute component={Leave}           feature="leave" />} />
+      <Route path="/recruitment"    component={() => <ProtectedRoute component={Recruitment}     feature="recruitment" />} />
+      <Route path="/performance"    component={() => <ProtectedRoute component={Performance}     feature="performance" />} />
+      <Route path="/benefits"       component={() => <ProtectedRoute component={Benefits}        feature="benefits" />} />
+      <Route path="/onboarding"     component={() => <ProtectedRoute component={Onboarding}      feature="onboarding" />} />
+      <Route path="/departments"    component={() => <ProtectedRoute component={Departments}     feature="departments" />} />
+      <Route path="/announcements"  component={() => <ProtectedRoute component={Announcements}   feature="announcements" />} />
+      <Route path="/expenses"       component={() => <ProtectedRoute component={Expenses}        feature="expenses" />} />
+      <Route path="/assets"         component={() => <ProtectedRoute component={Assets}          feature="assets" />} />
+      <Route path="/training"       component={() => <ProtectedRoute component={Training}        feature="training" />} />
+      <Route path="/org-chart"      component={() => <ProtectedRoute component={OrgChart}        feature="org-chart" />} />
+      <Route path="/reports"        component={() => <ProtectedRoute component={Reports}         feature="reports" />} />
+
       <Route component={NotFound} />
     </Switch>
   );

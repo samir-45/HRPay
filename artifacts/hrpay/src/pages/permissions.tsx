@@ -78,10 +78,10 @@ export default function Permissions() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  function toggle(role: RoleKey, feature: FeatureKey) {
+  function toggle(role: RoleKey, feature: FeatureKey, value: boolean) {
     setPerms(p => ({
       ...p,
-      [role]: { ...p[role], [feature]: !p[role][feature] },
+      [role]: { ...p[role], [feature]: value },
     }));
   }
 
@@ -302,7 +302,7 @@ export default function Permissions() {
                       <div key={r.key} className="flex items-center justify-center px-4 py-3">
                         <Toggle
                           checked={perms[r.key]?.[feature] ?? true}
-                          onChange={() => toggle(r.key, feature)}
+                          onChange={(v) => toggle(r.key, feature, v)}
                         />
                       </div>
                     ))}
