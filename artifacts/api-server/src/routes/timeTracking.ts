@@ -90,7 +90,7 @@ router.post("/time/entries", async (req, res) => {
   const user = getRequestUser(req);
   if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
 
-  const { employeeId, date, clockIn, clockOut, hoursWorked, notes } = req.body as {
+  const { employeeId, date, clockIn, clockOut, hoursWorked, notes } = (req.body ?? {}) as {
     employeeId: number;
     date: string;
     clockIn?: string;
@@ -143,7 +143,7 @@ router.post("/time/entries/bulk-approve", async (req, res) => {
   const user = requireNonEmployee(req, res);
   if (!user) return;
 
-  const { ids } = req.body as { ids: number[] };
+  const { ids } = (req.body ?? {}) as { ids: number[] };
   if (!Array.isArray(ids) || ids.length === 0) {
     res.status(400).json({ error: "ids array is required" }); return;
   }

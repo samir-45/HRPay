@@ -127,7 +127,7 @@ router.post("/leave/requests/:id/approve", async (req, res) => {
   if (!user) return;
 
   const { id } = ApproveLeaveRequestParams.parse({ id: Number(req.params.id) });
-  const { reviewedBy } = req.body as { reviewedBy?: string };
+  const { reviewedBy } = (req.body ?? {}) as { reviewedBy?: string };
 
   const [existing] = await db
     .select()
@@ -174,7 +174,7 @@ router.post("/leave/requests/:id/reject", async (req, res) => {
   if (!user) return;
 
   const { id } = RejectLeaveRequestParams.parse({ id: Number(req.params.id) });
-  const { reviewedBy } = req.body as { reviewedBy?: string };
+  const { reviewedBy } = (req.body ?? {}) as { reviewedBy?: string };
 
   const [existing] = await db
     .select()

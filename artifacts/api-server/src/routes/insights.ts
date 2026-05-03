@@ -303,7 +303,7 @@ router.patch("/insights/settings", async (req, res) => {
   const user = requireCompanyUser(req, res);
   if (!user) return;
 
-  const { enabled } = req.body as { enabled: boolean };
+  const { enabled } = (req.body ?? {}) as { enabled: boolean };
 
   const [company] = await db.select({ settings: companiesTable.settings })
     .from(companiesTable).where(eq(companiesTable.id, user.companyId));

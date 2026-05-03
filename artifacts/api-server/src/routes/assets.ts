@@ -136,7 +136,7 @@ router.patch("/assets/:id/assign", async (req, res) => {
     return;
   }
 
-  const { employeeId } = req.body as { employeeId?: number | null };
+  const { employeeId } = (req.body ?? {}) as { employeeId?: number | null };
   const id = Number(req.params.id);
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };

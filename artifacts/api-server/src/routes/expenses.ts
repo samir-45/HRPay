@@ -140,7 +140,7 @@ router.patch("/expenses/:id/status", async (req, res) => {
   const user = requireNonEmployee(req, res);
   if (!user) return;
 
-  const { status, reviewNotes, reviewedBy } = req.body as {
+  const { status, reviewNotes, reviewedBy } = (req.body ?? {}) as {
     status?: string; reviewNotes?: string; reviewedBy?: string;
   };
   if (!["approved", "rejected", "pending"].includes(status ?? "")) {

@@ -57,7 +57,7 @@ router.post("/performance/goals", async (req, res) => {
   if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
 
   /* Employees can only create goals for themselves */
-  const body = req.body as { employeeId?: number; [key: string]: unknown };
+  const body = (req.body ?? {}) as { employeeId?: number; [key: string]: unknown };
   if (user.role === "employee" && user.employeeId && body.employeeId && body.employeeId !== user.employeeId) {
     res.status(403).json({ error: "Cannot create goals for another employee" });
     return;
@@ -186,7 +186,7 @@ router.post("/performance/reviews", async (req, res) => {
   const {
     employeeId, reviewerId, cycle, period, overallRating, status,
     selfReview, managerFeedback, peerFeedback, strengths, improvements, comments, reviewDate,
-  } = req.body as Record<string, unknown>;
+  } = (req.body ?? {}) as Record<string, unknown>;
 
   if (!employeeId || !cycle || !period) {
     res.status(400).json({ error: "employeeId, cycle, and period are required" });

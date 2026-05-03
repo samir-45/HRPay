@@ -112,7 +112,7 @@ router.patch("/companies/:id", async (req, res) => {
   if (user.role !== "super_admin") { res.status(403).json({ error: "Forbidden" }); return; }
 
   const id = parseInt(req.params.id);
-  const { plan, status, billingCycle } = req.body as { plan?: string; status?: string; billingCycle?: string };
+  const { plan, status, billingCycle } = (req.body ?? {}) as { plan?: string; status?: string; billingCycle?: string };
 
   const updates: any = { updatedAt: new Date() };
   if (plan) updates.plan = plan;
@@ -220,7 +220,7 @@ router.patch("/companies/members/:userId", async (req, res) => {
   if (!allowedRoles.includes(user.role)) { res.status(403).json({ error: "Insufficient permissions" }); return; }
 
   const targetId = parseInt(req.params.userId);
-  const { role, isActive } = req.body as { role?: string; isActive?: boolean };
+  const { role, isActive } = (req.body ?? {}) as { role?: string; isActive?: boolean };
 
   const updates: any = { updatedAt: new Date() };
   if (role) updates.role = role;
