@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/components/auth-context";
 import {
   useGetDashboardSummary,
@@ -89,16 +89,22 @@ function DonutLabel({ cx, cy, total }: { cx: number; cy: number; total: number }
   );
 }
 
+const RANGE_MONTHS: Record<string, number> = { "1M": 1, "3M": 3, "6M": 6, "1Y": 12 };
+
 function AdminDashboard() {
+  const [trendRange, setTrendRange] = useState<"1M" | "3M" | "6M" | "1Y">("6M");
+
   const summary = useGetDashboardSummary();
   const headcount = useGetHeadcountByDepartment();
   const trends = useGetPayrollTrends({ months: 6 });
+  const growthTrends = useGetPayrollTrends({ months: RANGE_MONTHS[trendRange] });
   const leaveSummary = useGetLeaveSummary();
   const events = useGetUpcomingEvents();
 
   const s = summary.data;
   const hc = headcount.data ?? [];
   const tr = trends.data ?? [];
+  const growthData = growthTrends.data ?? [];
   const ls = leaveSummary.data ?? [];
 
   const empSpark = [18, 18, 19, 19, 19, 20, 20];
@@ -197,17 +203,18 @@ function AdminDashboard() {
               <p className="text-xs text-muted-foreground">Net pay over time</p>
             </div>
             <div className="flex gap-1 bg-muted rounded-xl p-1 text-xs">
-              {["1M", "3M", "6M", "1Y"].map((l, i) => (
-                <button key={l} className={`px-2.5 py-1 rounded-lg font-semibold transition-colors ${i === 2 ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  style={i === 2 ? { background: LIME } : {}}>{l}</button>
+              {(["1M", "3M", "6M", "1Y"] as const).map((l) => (
+                <button key={l} onClick={() => setTrendRange(l)}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition-colors ${trendRange === l ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  style={trendRange === l ? { background: LIME } : {}}>{l}</button>
               ))}
             </div>
           </div>
-          {tr.length === 0 ? (
+          {growthData.length === 0 ? (
             <div className="flex items-center justify-center h-44 text-muted-foreground text-sm">No completed payroll runs yet</div>
           ) : (
             <ResponsiveContainer width="100%" height={190}>
-              <AreaChart data={tr} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+              <AreaChart data={growthData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="limeGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={LIME} stopOpacity={0.25} />
