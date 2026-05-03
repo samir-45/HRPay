@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { employeesTable, departmentsTable } from "@workspace/db";
+import { employeesTable, departmentsTable, onboardingTasksTable, leaveBalancesTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import {
   ListEmployeesQueryParams,
@@ -17,6 +17,49 @@ const router = Router();
 
 function generateEmployeeCode(id: number): string {
   return "EMP-" + String(id).padStart(6, "0");
+}
+
+const DEFAULT_ONBOARDING_TASKS = [
+  { title: "Complete personal information form", category: "documentation", priority: "high", description: "Fill in all required personal details in the HR system." },
+  { title: "Review and sign employment contract", category: "documentation", priority: "high", description: "Read, acknowledge, and sign your employment agreement." },
+  { title: "Set up workstation and system access", category: "it_setup", priority: "high", description: "IT will configure your computer, email, and system credentials." },
+  { title: "Review employee handbook & policies", category: "policy", priority: "medium", description: "Read through company policies, code of conduct, and benefits overview." },
+  { title: "Complete benefits enrollment", category: "benefits", priority: "medium", description: "Select your health, dental, and retirement plan options." },
+  { title: "Attend company orientation session", category: "orientation", priority: "medium", description: "Join the onboarding orientation with HR and your team lead." },
+  { title: "Meet your team and key stakeholders", category: "orientation", priority: "low", description: "Schedule introductory meetings with your manager and teammates." },
+];
+
+const DEFAULT_LEAVE_TYPES = ["vacation", "sick", "personal"] as const;
+const DEFAULT_LEAVE_ALLOCATION = 14;
+
+async function seedOnboardingTasks(employeeId: number, startDate: string | null) {
+  const dueBase = startDate ? new Date(startDate) : new Date();
+  const tasks = DEFAULT_ONBOARDING_TASKS.map((t, i) => ({
+    employeeId,
+    title: t.title,
+    description: t.description,
+    category: t.category,
+    priority: t.priority,
+    dueDate: new Date(dueBase.getTime() + i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    isCompleted: false,
+    assignedTo: "HR",
+  }));
+  if (tasks.length > 0) {
+    await db.insert(onboardingTasksTable).values(tasks);
+  }
+}
+
+async function seedLeaveBalances(employeeId: number) {
+  const year = new Date().getFullYear();
+  const values = DEFAULT_LEAVE_TYPES.map((type) => ({
+    employeeId,
+    type,
+    allocated: String(DEFAULT_LEAVE_ALLOCATION),
+    used: "0",
+    pending: "0",
+    year,
+  }));
+  await db.insert(leaveBalancesTable).values(values).onConflictDoNothing();
 }
 
 router.get("/employees", async (req, res) => {
@@ -109,10 +152,18 @@ router.post("/employees", async (req, res) => {
     employee.employeeCode = generateEmployeeCode(employee.id);
   }
 
+  // Auto-seed onboarding tasks and leave balances in background (non-blocking)
+  Promise.all([
+    seedOnboardingTasks(employee.id, employee.startDate),
+    seedLeaveBalances(employee.id),
+  ]).catch(() => {});
+
   await notify(
     "New Employee Joined",
     `${employee.firstName} ${employee.lastName} (${employee.employeeCode}) has been added as ${employee.position}.`,
-    "celebration"
+    "celebration",
+    "System",
+    user.companyId
   );
 
   res.status(201).json(employee);

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { leaveRequestsTable, leaveBalancesTable, employeesTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import {
   ListLeaveRequestsQueryParams,
   CreateLeaveRequestBody,
@@ -58,6 +58,9 @@ router.get("/leave/requests", async (req, res) => {
 });
 
 router.post("/leave/requests", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const body = CreateLeaveRequestBody.parse(req.body);
   const start = new Date(body.startDate);
   const end = new Date(body.endDate);
@@ -69,20 +72,57 @@ router.post("/leave/requests", async (req, res) => {
     .values({ ...body, days: String(days) })
     .returning();
 
+  // Auto-update pending balance
+  const year = new Date().getFullYear();
+  const [existing] = await db
+    .select()
+    .from(leaveBalancesTable)
+    .where(and(
+      eq(leaveBalancesTable.employeeId, body.employeeId),
+      eq(leaveBalancesTable.type, body.type),
+      eq(leaveBalancesTable.year, year)
+    ));
+
+  if (existing) {
+    await db
+      .update(leaveBalancesTable)
+      .set({ pending: sql`${leaveBalancesTable.pending} + ${days}` })
+      .where(eq(leaveBalancesTable.id, existing.id));
+  } else {
+    await db.insert(leaveBalancesTable).values({
+      employeeId: body.employeeId,
+      type: body.type,
+      allocated: "14",
+      used: "0",
+      pending: String(days),
+      year,
+    });
+  }
+
   await notify(
     "New Leave Request",
     `A new ${body.type} leave request has been submitted for ${days} day(s) starting ${body.startDate}.`,
-    "info"
+    "info",
+    "System",
+    user.companyId
   );
 
   res.status(201).json({ ...request, days: Number(request.days) });
 });
 
 router.post("/leave/requests/:id/approve", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
+  const user = requireNonEmployee(req, res);
+  if (!user) return;
 
   const { id } = ApproveLeaveRequestParams.parse({ id: Number(req.params.id) });
   const { reviewedBy } = req.body as { reviewedBy?: string };
+
+  const [existing] = await db
+    .select()
+    .from(leaveRequestsTable)
+    .where(eq(leaveRequestsTable.id, id));
+  if (!existing) return res.status(404).json({ error: "Not found" });
+
   const [updated] = await db
     .update(leaveRequestsTable)
     .set({ status: "approved", reviewedBy: reviewedBy ?? null, reviewedAt: new Date() })
@@ -90,15 +130,47 @@ router.post("/leave/requests/:id/approve", async (req, res) => {
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
 
-  await notify("Leave Approved", `Leave request #${id} has been approved.`, "success");
+  // Move from pending → used in leave balance
+  const year = new Date(existing.startDate).getFullYear();
+  const days = existing.days ? Number(existing.days) : 0;
+  if (days > 0) {
+    await db
+      .update(leaveBalancesTable)
+      .set({
+        pending: sql`GREATEST(0, ${leaveBalancesTable.pending} - ${days})`,
+        used: sql`${leaveBalancesTable.used} + ${days}`,
+      })
+      .where(and(
+        eq(leaveBalancesTable.employeeId, existing.employeeId),
+        eq(leaveBalancesTable.type, existing.type),
+        eq(leaveBalancesTable.year, year)
+      ));
+  }
+
+  await notify(
+    "Leave Approved",
+    `Leave request #${id} (${existing.type}, ${days} day(s)) has been approved.`,
+    "success",
+    "System",
+    user.companyId
+  );
+
   res.json({ ...updated, days: updated.days ? Number(updated.days) : null });
 });
 
 router.post("/leave/requests/:id/reject", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
+  const user = requireNonEmployee(req, res);
+  if (!user) return;
 
   const { id } = RejectLeaveRequestParams.parse({ id: Number(req.params.id) });
   const { reviewedBy } = req.body as { reviewedBy?: string };
+
+  const [existing] = await db
+    .select()
+    .from(leaveRequestsTable)
+    .where(eq(leaveRequestsTable.id, id));
+  if (!existing) return res.status(404).json({ error: "Not found" });
+
   const [updated] = await db
     .update(leaveRequestsTable)
     .set({ status: "rejected", reviewedBy: reviewedBy ?? null, reviewedAt: new Date() })
@@ -106,7 +178,30 @@ router.post("/leave/requests/:id/reject", async (req, res) => {
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
 
-  await notify("Leave Rejected", `Leave request #${id} has been rejected.`, "warning");
+  // Release pending balance back
+  const year = new Date(existing.startDate).getFullYear();
+  const days = existing.days ? Number(existing.days) : 0;
+  if (days > 0) {
+    await db
+      .update(leaveBalancesTable)
+      .set({
+        pending: sql`GREATEST(0, ${leaveBalancesTable.pending} - ${days})`,
+      })
+      .where(and(
+        eq(leaveBalancesTable.employeeId, existing.employeeId),
+        eq(leaveBalancesTable.type, existing.type),
+        eq(leaveBalancesTable.year, year)
+      ));
+  }
+
+  await notify(
+    "Leave Rejected",
+    `Leave request #${id} (${existing.type}, ${days} day(s)) has been rejected.`,
+    "warning",
+    "System",
+    user.companyId
+  );
+
   res.json({ ...updated, days: updated.days ? Number(updated.days) : null });
 });
 

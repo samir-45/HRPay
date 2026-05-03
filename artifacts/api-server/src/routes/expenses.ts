@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { expenseClaimsTable, employeesTable } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
 import { requireNonEmployee, getRequestUser } from "../lib/auth-helpers";
+import { notify } from "../lib/notify";
 
 const router = Router();
 
@@ -58,6 +59,9 @@ router.get("/expenses/:id", async (req, res) => {
 });
 
 router.post("/expenses", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { employeeId, title, category, amount, currency, expenseDate, description, receiptUrl } = req.body as {
     employeeId?: number | string; title?: string; category?: string; amount?: number | string;
     currency?: string; expenseDate?: string; description?: string; receiptUrl?: string;
@@ -72,11 +76,21 @@ router.post("/expenses", async (req, res) => {
     amount: String(amount), currency: currency ?? "USD",
     expenseDate, description, receiptUrl, status: "pending",
   }).returning();
+
+  await notify(
+    "Expense Submitted",
+    `A new expense claim "${title}" for ${currency ?? "USD"} ${amount} has been submitted.`,
+    "info",
+    "System",
+    user.companyId
+  );
+
   res.status(201).json(claim);
 });
 
 router.patch("/expenses/:id/status", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
+  const user = requireNonEmployee(req, res);
+  if (!user) return;
 
   const { status, reviewNotes, reviewedBy } = req.body as {
     status?: string; reviewNotes?: string; reviewedBy?: string;
@@ -84,12 +98,37 @@ router.patch("/expenses/:id/status", async (req, res) => {
   if (!["approved", "rejected", "pending"].includes(status ?? "")) {
     return res.status(400).json({ error: "Invalid status" });
   }
+
+  const [existing] = await db
+    .select({ title: expenseClaimsTable.title, amount: expenseClaimsTable.amount })
+    .from(expenseClaimsTable)
+    .where(eq(expenseClaimsTable.id, Number(req.params.id)));
+
   const [updated] = await db
     .update(expenseClaimsTable)
     .set({ status: status!, reviewNotes: reviewNotes ?? null, reviewedBy: reviewedBy ?? null, reviewedAt: new Date() })
     .where(eq(expenseClaimsTable.id, Number(req.params.id)))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
+
+  if (status === "approved") {
+    await notify(
+      "Expense Approved",
+      `Expense claim "${existing?.title ?? `#${req.params.id}`}" has been approved.`,
+      "success",
+      "System",
+      user.companyId
+    );
+  } else if (status === "rejected") {
+    await notify(
+      "Expense Rejected",
+      `Expense claim "${existing?.title ?? `#${req.params.id}`}" has been rejected${reviewNotes ? `: ${reviewNotes}` : "."}`,
+      "warning",
+      "System",
+      user.companyId
+    );
+  }
+
   res.json(updated);
 });
 

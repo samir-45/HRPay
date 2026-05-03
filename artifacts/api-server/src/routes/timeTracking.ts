@@ -57,6 +57,9 @@ router.get("/time/entries", async (req, res) => {
 });
 
 router.post("/time/entries", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const body = CreateTimeEntryBody.parse(req.body);
 
   let hoursWorked: string | undefined;
@@ -72,8 +75,10 @@ router.post("/time/entries", async (req, res) => {
 
   await notify(
     "Time Entry Submitted",
-    `A new time entry has been submitted for ${entry.date}.`,
-    "info"
+    `A new time entry has been submitted for ${entry.date} (${hoursWorked ?? body.hoursWorked ?? "?"} hrs).`,
+    "info",
+    "System",
+    user.companyId
   );
 
   res.status(201).json({
@@ -84,7 +89,8 @@ router.post("/time/entries", async (req, res) => {
 });
 
 router.post("/time/entries/:id/approve", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
+  const user = requireNonEmployee(req, res);
+  if (!user) return;
 
   const { id } = ApproveTimeEntryParams.parse({ id: Number(req.params.id) });
   const [updated] = await db
@@ -94,6 +100,14 @@ router.post("/time/entries/:id/approve", async (req, res) => {
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
 
+  await notify(
+    "Time Entry Approved",
+    `Time entry #${id} for ${updated.date} (${updated.hoursWorked ?? "?"}h) has been approved.`,
+    "success",
+    "System",
+    user.companyId
+  );
+
   res.json({
     ...updated,
     hoursWorked: updated.hoursWorked ? Number(updated.hoursWorked) : null,
@@ -102,7 +116,8 @@ router.post("/time/entries/:id/approve", async (req, res) => {
 });
 
 router.post("/time/entries/:id/reject", async (req, res) => {
-  if (!requireNonEmployee(req, res)) return;
+  const user = requireNonEmployee(req, res);
+  if (!user) return;
 
   const id = Number(req.params.id);
   const [updated] = await db
@@ -111,6 +126,14 @@ router.post("/time/entries/:id/reject", async (req, res) => {
     .where(eq(timeEntriesTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
+
+  await notify(
+    "Time Entry Rejected",
+    `Time entry #${id} for ${updated.date} has been rejected.`,
+    "warning",
+    "System",
+    user.companyId
+  );
 
   res.json({
     ...updated,

@@ -59,7 +59,9 @@ router.post("/payroll/runs", async (req, res) => {
   await notify(
     "Payroll Run Created",
     `A new payroll run "${run.name}" has been created for the period ${run.periodStart} – ${run.periodEnd} (pay date: ${run.payDate}).`,
-    "info"
+    "info",
+    "System",
+    user.companyId
   );
 
   res.status(201).json(mapRun(run));
@@ -151,8 +153,10 @@ router.post("/payroll/runs/:id/process", async (req, res) => {
 
   await notify(
     "Payroll Processed",
-    `Payroll run "${run.name}" has been processed for ${employees.length} employees. Net pay: $${totalNet.toFixed(2)}.`,
-    "success"
+    `Payroll run "${run.name}" has been successfully processed for ${employees.length} employee(s). Total net pay: $${totalNet.toFixed(2)}.`,
+    "success",
+    "System",
+    user.companyId
   );
 
   res.json(mapRun(processed));
