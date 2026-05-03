@@ -36,6 +36,7 @@ interface Enrollment {
   employeeId: number;
   firstName?: string;
   lastName?: string;
+  avatarUrl?: string;
   status: string;
   progress: number;
   score?: string;
@@ -359,9 +360,13 @@ export default function Training() {
                   const ss = STATUS_LABELS[e.status] ?? STATUS_LABELS.enrolled;
                   return (
                     <div key={e.id} className="flex items-center gap-3 rounded-xl bg-muted/40 px-3 py-2.5">
-                      <div className="size-7 rounded-full bg-foreground flex items-center justify-center text-white text-[10px] font-bold shrink-0">
-                        {(e.firstName?.[0] ?? "") + (e.lastName?.[0] ?? "")}
-                      </div>
+                      {e.avatarUrl ? (
+                        <img src={e.avatarUrl} alt={`${e.firstName} ${e.lastName}`} className="size-7 rounded-full object-cover shrink-0" onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                      ) : (
+                        <div className="size-7 rounded-full bg-foreground flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                          {(e.firstName?.[0] ?? "") + (e.lastName?.[0] ?? "")}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">{e.firstName} {e.lastName}</p>
                         <div className="flex items-center gap-2 mt-0.5">

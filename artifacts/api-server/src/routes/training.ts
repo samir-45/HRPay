@@ -72,6 +72,7 @@ router.get("/training/enrollments", async (_req, res) => {
       employeeId: enrollmentsTable.employeeId,
       firstName: employeesTable.firstName,
       lastName: employeesTable.lastName,
+      avatarUrl: employeesTable.avatarUrl,
       status: enrollmentsTable.status,
       progress: enrollmentsTable.progress,
       score: enrollmentsTable.score,

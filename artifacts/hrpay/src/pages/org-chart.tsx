@@ -23,13 +23,33 @@ const DEPT_COLORS = [
   "#0ea5e9",
 ];
 
-function EmployeeCard({ emp, compact = false }: { emp: Employee; compact?: boolean }) {
+function EmpAvatar({ emp, compact = false }: { emp: Employee; compact?: boolean }) {
   const initials = (emp.firstName[0] ?? "") + (emp.lastName[0] ?? "");
+  const sz = compact ? 28 : 36;
+  if (emp.avatarUrl) {
+    return (
+      <img
+        src={emp.avatarUrl}
+        alt={`${emp.firstName} ${emp.lastName}`}
+        className="shrink-0 rounded-xl object-cover"
+        style={{ width: sz, height: sz }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+    );
+  }
+  return (
+    <div
+      className={`shrink-0 flex items-center justify-center rounded-xl bg-foreground text-white font-bold ${compact ? "size-7 text-[10px]" : "size-9 text-xs"}`}
+    >
+      {initials}
+    </div>
+  );
+}
+
+function EmployeeCard({ emp, compact = false }: { emp: Employee; compact?: boolean }) {
   return (
     <div className={`flex items-center gap-2.5 rounded-xl border border-border bg-white shadow-sm transition-shadow hover:shadow-md ${compact ? "p-2.5" : "p-3"}`}>
-      <div className={`shrink-0 flex items-center justify-center rounded-xl bg-foreground text-white font-bold ${compact ? "size-7 text-[10px]" : "size-9 text-xs"}`}>
-        {initials}
-      </div>
+      <EmpAvatar emp={emp} compact={compact} />
       <div className="min-w-0">
         <p className={`font-semibold text-foreground truncate leading-tight ${compact ? "text-xs" : "text-sm"}`}>
           {emp.firstName} {emp.lastName}
@@ -187,9 +207,7 @@ export default function OrgChart() {
                 <tr key={emp.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2.5">
-                      <div className="size-7 rounded-xl bg-foreground flex items-center justify-center text-white text-[10px] font-bold shrink-0">
-                        {(emp.firstName[0] ?? "") + (emp.lastName[0] ?? "")}
-                      </div>
+                      <EmpAvatar emp={emp} compact />
                       <span className="font-medium">{emp.firstName} {emp.lastName}</span>
                     </div>
                   </td>
