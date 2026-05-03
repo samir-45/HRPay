@@ -10,6 +10,7 @@ import {
   getListEmployeesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/auth-context";
 import { Check, X, Plus, CalendarDays } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -30,14 +31,30 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function Leave() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isEmployee = user?.role === "employee";
+  const myEmployeeId = user?.employeeId;
+
   const [status, setStatus] = useState("");
   const [type, setType] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ employeeId: "", type: "vacation", startDate: "", endDate: "", reason: "" });
+  const [form, setForm] = useState({
+    employeeId: myEmployeeId ? String(myEmployeeId) : "",
+    type: "vacation",
+    startDate: "",
+    endDate: "",
+    reason: "",
+  });
 
-  const params = { ...(status && { status: status as "pending" | "approved" | "rejected" | "cancelled" }), ...(type && { type: type as "vacation" | "sick" | "personal" | "maternity" | "paternity" | "unpaid" }) };
+  const params = {
+    ...(isEmployee && myEmployeeId ? { employeeId: myEmployeeId } : {}),
+    ...(status && { status: status as "pending" | "approved" | "rejected" | "cancelled" }),
+    ...(type && { type: type as "vacation" | "sick" | "personal" | "maternity" | "paternity" | "unpaid" }),
+  };
   const { data: requests, isLoading } = useListLeaveRequests(params, { query: { queryKey: getListLeaveRequestsQueryKey(params) } });
-  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }) } });
+  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, {
+    query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
+  });
 
   const approveMut = useApproveLeaveRequest({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }) } });
   const rejectMut = useRejectLeaveRequest({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) }) } });
@@ -46,7 +63,7 @@ export default function Leave() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey({}) });
         setShowModal(false);
-        setForm({ employeeId: "", type: "vacation", startDate: "", endDate: "", reason: "" });
+        setForm({ employeeId: myEmployeeId ? String(myEmployeeId) : "", type: "vacation", startDate: "", endDate: "", reason: "" });
       },
     },
   });
@@ -65,11 +82,11 @@ export default function Leave() {
           <p className="text-sm text-muted-foreground">{reqList.length} requests · {pending.length} pending</p>
         </div>
         <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 shrink-0">
-          <Plus className="h-4 w-4" /><span className="hidden sm:inline">New Request</span>
+          <Plus className="h-4 w-4" /><span className="hidden sm:inline">{isEmployee ? "Request Leave" : "New Request"}</span>
         </button>
       </div>
 
-      {pending.length > 0 && (
+      {!isEmployee && pending.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-sm font-semibold text-amber-800 mb-3"><CalendarDays className="inline h-4 w-4 mr-1" />{pending.length} requests awaiting approval</p>
           <div className="space-y-2">
@@ -118,7 +135,7 @@ export default function Leave() {
         </div>
       ) : reqList.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-white rounded-xl border border-border">
-          <p className="text-sm">No leave requests found.</p>
+          <p className="text-sm">{isEmployee ? "You have no leave requests yet." : "No leave requests found."}</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
@@ -126,18 +143,18 @@ export default function Leave() {
           <table className="w-full text-sm min-w-[560px]">
             <thead className="border-b border-border bg-muted/30">
               <tr>
-                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>
+                {!isEmployee && <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>}
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Period</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Days</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-right px-5 py-3 font-medium text-muted-foreground">Actions</th>
+                {!isEmployee && <th className="text-right px-5 py-3 font-medium text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {reqList.map((r) => (
                 <tr key={r.id} className="hover:bg-muted/20">
-                  <td className="px-5 py-3 font-medium text-foreground">{r.employeeName}</td>
+                  {!isEmployee && <td className="px-5 py-3 font-medium text-foreground">{r.employeeName}</td>}
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[r.type] ?? "bg-gray-100"}`}>{r.type}</span>
                   </td>
@@ -146,14 +163,16 @@ export default function Leave() {
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[r.status] ?? "bg-gray-100"}`}>{r.status}</span>
                   </td>
-                  <td className="px-5 py-3 text-right">
-                    {r.status === "pending" && (
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => approveMut.mutate({ id: r.id })} className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"><Check className="h-3.5 w-3.5" /> Approve</button>
-                        <button onClick={() => rejectMut.mutate({ id: r.id })} className="inline-flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600"><X className="h-3.5 w-3.5" /> Reject</button>
-                      </div>
-                    )}
-                  </td>
+                  {!isEmployee && (
+                    <td className="px-5 py-3 text-right">
+                      {r.status === "pending" && (
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => approveMut.mutate({ id: r.id })} className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"><Check className="h-3.5 w-3.5" /> Approve</button>
+                          <button onClick={() => rejectMut.mutate({ id: r.id })} className="inline-flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600"><X className="h-3.5 w-3.5" /> Reject</button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -170,13 +189,15 @@ export default function Leave() {
               <button onClick={() => setShowModal(false)} className="p-1.5 rounded text-muted-foreground hover:bg-muted/50"><X className="h-4 w-4" /></button>
             </div>
             <form onSubmit={e => { e.preventDefault(); createMut.mutate({ data: { type: form.type as "vacation" | "sick" | "personal" | "maternity" | "paternity" | "unpaid", startDate: form.startDate, endDate: form.endDate, reason: form.reason || undefined, employeeId: Number(form.employeeId) } }); }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Employee</label>
-                <select required value={form.employeeId} onChange={set("employeeId")} className={inputCls}>
-                  <option value="">Select employee</option>
-                  {(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                </select>
-              </div>
+              {!isEmployee && (
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Employee</label>
+                  <select required value={form.employeeId} onChange={set("employeeId")} className={inputCls}>
+                    <option value="">Select employee</option>
+                    {(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1.5">Leave Type</label>
                 <select required value={form.type} onChange={set("type")} className={inputCls}>
@@ -204,7 +225,7 @@ export default function Leave() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50">Cancel</button>
-                <button type="submit" disabled={createMut.isPending} className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
+                <button type="submit" disabled={!form.employeeId || createMut.isPending} className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
                   {createMut.isPending ? "Submitting..." : "Submit Request"}
                 </button>
               </div>

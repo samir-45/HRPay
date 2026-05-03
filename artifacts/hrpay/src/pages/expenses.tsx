@@ -4,7 +4,7 @@ import { useAuth, apiHeaders } from "@/components/auth-context";
 import { SkeletonTableRows } from "@/components/skeletons";
 import {
   Receipt, Plus, CheckCircle, XCircle, Clock, DollarSign,
-  ChevronDown, X, Filter, TrendingUp,
+  X, TrendingUp,
 } from "lucide-react";
 
 const API = "/api";
@@ -43,12 +43,22 @@ interface Expense {
 interface Employee { id: number; firstName: string; lastName: string; }
 
 export default function Expenses() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isEmployee = user?.role === "employee";
+  const myEmployeeId = user?.employeeId;
+
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [selected, setSelected] = useState<Expense | null>(null);
-  const [form, setForm] = useState({ employeeId: "", title: "", category: "travel", amount: "", expenseDate: new Date().toISOString().split("T")[0], description: "" });
+  const [form, setForm] = useState({
+    employeeId: myEmployeeId ? String(myEmployeeId) : "",
+    title: "",
+    category: "travel",
+    amount: "",
+    expenseDate: new Date().toISOString().split("T")[0],
+    description: "",
+  });
 
   const expenses = useQuery<Expense[]>({
     queryKey: ["expenses"],
@@ -57,6 +67,7 @@ export default function Expenses() {
   const employees = useQuery<Employee[]>({
     queryKey: ["employees-short"],
     queryFn: () => fetch(`${API}/employees`, { headers: apiHeaders(token) }).then(r => r.json()),
+    enabled: !isEmployee,
   });
 
   const submit = useMutation({
@@ -64,19 +75,27 @@ export default function Expenses() {
       method: "POST", headers: apiHeaders(token),
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
     }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["expenses"] }); setShowForm(false); setForm({ employeeId: "", title: "", category: "travel", amount: "", expenseDate: new Date().toISOString().split("T")[0], description: "" }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+      setShowForm(false);
+      setForm({ employeeId: myEmployeeId ? String(myEmployeeId) : "", title: "", category: "travel", amount: "", expenseDate: new Date().toISOString().split("T")[0], description: "" });
+    },
   });
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status, reviewNotes }: { id: number; status: string; reviewNotes?: string }) =>
-      fetch(`${API}/expenses/${id}/status`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ status, reviewNotes, reviewedBy: "Admin" }) }).then(r => r.json()),
+      fetch(`${API}/expenses/${id}/status`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ status, reviewNotes, reviewedBy: user?.name ?? "Admin" }) }).then(r => r.json()),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["expenses"] }); setSelected(null); },
   });
 
-  const list = (expenses.data ?? []).filter(e => filterStatus === "all" || e.status === filterStatus);
-  const total = (expenses.data ?? []).reduce((s, e) => s + Number(e.amount), 0);
-  const pending = (expenses.data ?? []).filter(e => e.status === "pending").reduce((s, e) => s + Number(e.amount), 0);
-  const approved = (expenses.data ?? []).filter(e => e.status === "approved").reduce((s, e) => s + Number(e.amount), 0);
+  const allExpenses = expenses.data ?? [];
+  const filteredByRole = isEmployee && myEmployeeId
+    ? allExpenses.filter(e => e.employeeId === myEmployeeId)
+    : allExpenses;
+  const list = filteredByRole.filter(e => filterStatus === "all" || e.status === filterStatus);
+  const total = filteredByRole.reduce((s, e) => s + Number(e.amount), 0);
+  const pending = filteredByRole.filter(e => e.status === "pending").reduce((s, e) => s + Number(e.amount), 0);
+  const approved = filteredByRole.filter(e => e.status === "approved").reduce((s, e) => s + Number(e.amount), 0);
 
   return (
     <div className="space-y-5">
@@ -84,17 +103,19 @@ export default function Expenses() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground">Expenses & Reimbursements</h2>
-          <p className="text-sm text-muted-foreground">Track and approve employee expense claims</p>
+          <p className="text-sm text-muted-foreground">
+            {isEmployee ? "Track your expense claims" : "Track and approve employee expense claims"}
+          </p>
         </div>
         <button onClick={() => setShowForm(true)} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground hover:opacity-90 transition-all" style={{ background: LIME }}>
-          <Plus className="h-4 w-4" /> New Claim
+          <Plus className="h-4 w-4" /> {isEmployee ? "Submit Claim" : "New Claim"}
         </button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total Claims", value: fmt(total), icon: DollarSign, hero: true },
+          { label: isEmployee ? "My Total Claims" : "Total Claims", value: fmt(total), icon: DollarSign, hero: true },
           { label: "Pending Approval", value: fmt(pending), icon: Clock },
           { label: "Approved", value: fmt(approved), icon: TrendingUp },
         ].map(({ label, value, icon: Icon, hero }) => (
@@ -122,21 +143,23 @@ export default function Expenses() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              {["Employee", "Title", "Category", "Amount", "Date", "Status", "Actions"].map(h => (
+              {(!isEmployee ? ["Employee", "Title", "Category", "Amount", "Date", "Status", "Actions"] : ["Title", "Category", "Amount", "Date", "Status"]).map(h => (
                 <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {expenses.isLoading ? (
-              <SkeletonTableRows rows={6} cols={7} />
+              <SkeletonTableRows rows={6} cols={isEmployee ? 5 : 7} />
             ) : list.length === 0 ? (
-              <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">No expense claims found</td></tr>
+              <tr><td colSpan={isEmployee ? 5 : 7} className="py-12 text-center text-muted-foreground text-sm">
+                {isEmployee ? "You have no expense claims yet." : "No expense claims found"}
+              </td></tr>
             ) : list.map(expense => {
               const sc = STATUS_COLORS[expense.status] ?? STATUS_COLORS.pending;
               return (
                 <tr key={expense.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                  <td className="py-3 px-4 font-medium">{expense.firstName} {expense.lastName}</td>
+                  {!isEmployee && <td className="py-3 px-4 font-medium">{expense.firstName} {expense.lastName}</td>}
                   <td className="py-3 px-4">{expense.title}</td>
                   <td className="py-3 px-4"><span className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{expense.category.replace("_", " ")}</span></td>
                   <td className="py-3 px-4 font-semibold">{fmt(Number(expense.amount))}</td>
@@ -144,25 +167,27 @@ export default function Expenses() {
                   <td className="py-3 px-4">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${sc.bg} ${sc.text}`}>{expense.status}</span>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex gap-1.5">
-                      {expense.status === "pending" && (
-                        <>
-                          <button onClick={() => updateStatus.mutate({ id: expense.id, status: "approved" })} className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-lime-700 bg-lime-100 hover:bg-lime-200 transition-colors">
-                            <CheckCircle className="h-3 w-3" /> Approve
-                          </button>
-                          <button onClick={() => setSelected(expense)} className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 transition-colors">
-                            <XCircle className="h-3 w-3" /> Reject
-                          </button>
-                        </>
-                      )}
-                      {expense.status !== "pending" && (
-                        <span className="text-xs text-muted-foreground">
-                          {expense.reviewedAt ? new Date(expense.reviewedAt).toLocaleDateString() : "—"}
-                        </span>
-                      )}
-                    </div>
-                  </td>
+                  {!isEmployee && (
+                    <td className="py-3 px-4">
+                      <div className="flex gap-1.5">
+                        {expense.status === "pending" && (
+                          <>
+                            <button onClick={() => updateStatus.mutate({ id: expense.id, status: "approved" })} className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-lime-700 bg-lime-100 hover:bg-lime-200 transition-colors">
+                              <CheckCircle className="h-3 w-3" /> Approve
+                            </button>
+                            <button onClick={() => setSelected(expense)} className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 transition-colors">
+                              <XCircle className="h-3 w-3" /> Reject
+                            </button>
+                          </>
+                        )}
+                        {expense.status !== "pending" && (
+                          <span className="text-xs text-muted-foreground">
+                            {expense.reviewedAt ? new Date(expense.reviewedAt).toLocaleDateString() : "—"}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -179,13 +204,15 @@ export default function Expenses() {
               <button onClick={() => setShowForm(false)} className="rounded-xl p-1.5 hover:bg-muted transition-colors"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Employee</label>
-                <select value={form.employeeId} onChange={e => setForm(p => ({ ...p, employeeId: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm">
-                  <option value="">Select employee…</option>
-                  {(employees.data ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                </select>
-              </div>
+              {!isEmployee && (
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Employee</label>
+                  <select value={form.employeeId} onChange={e => setForm(p => ({ ...p, employeeId: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm">
+                    <option value="">Select employee…</option>
+                    {(employees.data ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium block mb-1.5">Title</label>
                 <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Flight to NYC" className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm" />
@@ -222,7 +249,7 @@ export default function Expenses() {
       )}
 
       {/* Reject Modal */}
-      {selected && (
+      {selected && !isEmployee && (
         <RejectModal
           expense={selected}
           onClose={() => setSelected(null)}

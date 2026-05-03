@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { expenseClaimsTable, employeesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import { requireNonEmployee } from "../lib/auth-helpers";
 
 const router = Router();
 
@@ -54,6 +55,7 @@ router.post("/expenses", async (req, res) => {
 });
 
 router.patch("/expenses/:id/status", async (req, res) => {
+  if (!requireNonEmployee(req, res)) return;
   const { status, reviewNotes, reviewedBy } = req.body;
   if (!["approved", "rejected", "pending"].includes(status)) {
     return res.status(400).json({ error: "status must be approved, rejected, or pending" });
@@ -66,6 +68,7 @@ router.patch("/expenses/:id/status", async (req, res) => {
 });
 
 router.delete("/expenses/:id", async (req, res) => {
+  if (!requireNonEmployee(req, res)) return;
   await db.delete(expenseClaimsTable).where(eq(expenseClaimsTable.id, Number(req.params.id)));
   res.status(204).end();
 });

@@ -10,6 +10,7 @@ import {
   getListEmployeesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/auth-context";
 import { Plus, X, Shield } from "lucide-react";
 
 function fmt(n: number | null | undefined) {
@@ -29,14 +30,20 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function Benefits() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isEmployee = user?.role === "employee";
+  const myEmployeeId = user?.employeeId;
+
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [planForm, setPlanForm] = useState({ name: "", type: "health", provider: "", description: "", employeeCost: "", employerCost: "" });
-  const [enrollForm, setEnrollForm] = useState({ employeeId: "", planId: "" });
+  const [enrollForm, setEnrollForm] = useState({ employeeId: myEmployeeId ? String(myEmployeeId) : "", planId: "" });
 
   const { data: plans } = useListBenefitPlans({ query: { queryKey: getListBenefitPlansQueryKey() } });
   const { data: enrollments } = useListBenefitEnrollments({}, { query: { queryKey: getListBenefitEnrollmentsQueryKey({}) } });
-  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }) } });
+  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, {
+    query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
+  });
 
   const createPlanMut = useCreateBenefitPlan({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListBenefitPlansQueryKey() }); setShowPlanModal(false); } } });
   const createEnrollMut = useCreateBenefitEnrollment({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListBenefitEnrollmentsQueryKey({}) }); setShowEnrollModal(false); } } });
@@ -45,7 +52,9 @@ export default function Benefits() {
   const setE = (k: string) => (e: React.ChangeEvent<HTMLSelectElement>) => setEnrollForm(f => ({ ...f, [k]: e.target.value }));
 
   const planList = plans ?? [];
-  const enrollList = enrollments ?? [];
+  const enrollList = isEmployee && myEmployeeId
+    ? (enrollments ?? []).filter(e => e.employeeId === myEmployeeId)
+    : (enrollments ?? []);
   const inputCls = "w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20";
 
   return (
@@ -55,60 +64,70 @@ export default function Benefits() {
           <h2 className="text-lg font-semibold">Benefits</h2>
           <p className="text-sm text-muted-foreground">{planList.length} plans · {enrollList.filter(e => e.isActive).length} active enrollments</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => setShowEnrollModal(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50">
-            <Plus className="h-4 w-4" /><span className="hidden sm:inline">Enroll Employee</span>
-          </button>
-          <button onClick={() => setShowPlanModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
-            <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Plan</span>
-          </button>
-        </div>
+        {!isEmployee && (
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setShowEnrollModal(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50">
+              <Plus className="h-4 w-4" /><span className="hidden sm:inline">Enroll Employee</span>
+            </button>
+            <button onClick={() => setShowPlanModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
+              <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Plan</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Plans */}
       <div>
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Benefit Plans</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {planList.map((plan) => (
-            <div key={plan.id} className="bg-white rounded-xl border border-border p-5 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <Shield className="h-5 w-5 text-primary" />
+        {planList.length === 0 ? (
+          <div className="flex items-center justify-center py-8 text-muted-foreground text-sm bg-white rounded-xl border border-border">No benefit plans available.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {planList.map((plan) => (
+              <div key={plan.id} className="bg-white rounded-xl border border-border p-5 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[plan.type] ?? "bg-gray-100"}`}>{plan.type}</span>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[plan.type] ?? "bg-gray-100"}`}>{plan.type}</span>
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">{plan.name}</p>
-                {plan.provider && <p className="text-sm text-muted-foreground">{plan.provider}</p>}
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div className="rounded-lg bg-muted/40 px-3 py-2">
-                  <p className="text-xs text-muted-foreground">Employee cost</p>
-                  <p className="text-sm font-semibold">{fmt(plan.employeeCost)}/mo</p>
+                <div>
+                  <p className="font-semibold text-foreground">{plan.name}</p>
+                  {plan.provider && <p className="text-sm text-muted-foreground">{plan.provider}</p>}
                 </div>
-                <div className="rounded-lg bg-muted/40 px-3 py-2">
-                  <p className="text-xs text-muted-foreground">Employer cost</p>
-                  <p className="text-sm font-semibold">{fmt(plan.employerCost)}/mo</p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="rounded-lg bg-muted/40 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Employee cost</p>
+                    <p className="text-sm font-semibold">{fmt(plan.employeeCost)}/mo</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Employer cost</p>
+                    <p className="text-sm font-semibold">{fmt(plan.employerCost)}/mo</p>
+                  </div>
                 </div>
+                {!isEmployee && <p className="text-xs text-muted-foreground">{plan.enrolledCount ?? 0} employees enrolled</p>}
               </div>
-              <p className="text-xs text-muted-foreground">{plan.enrolledCount ?? 0} employees enrolled</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Enrollments */}
       <div>
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Recent Enrollments</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          {isEmployee ? "My Enrollments" : "Recent Enrollments"}
+        </h3>
         {enrollList.length === 0 ? (
-          <div className="flex items-center justify-center py-8 text-muted-foreground text-sm bg-white rounded-xl border border-border">No enrollments yet.</div>
+          <div className="flex items-center justify-center py-8 text-muted-foreground text-sm bg-white rounded-xl border border-border">
+            {isEmployee ? "You are not enrolled in any benefits yet." : "No enrollments yet."}
+          </div>
         ) : (
           <div className="bg-white rounded-xl border border-border overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[420px]">
               <thead className="border-b border-border bg-muted/30">
                 <tr>
-                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>
+                  {!isEmployee && <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>}
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Plan</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Enrolled</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
@@ -117,7 +136,7 @@ export default function Benefits() {
               <tbody className="divide-y divide-border">
                 {enrollList.slice(0, 20).map((e) => (
                   <tr key={e.id} className="hover:bg-muted/20">
-                    <td className="px-5 py-3 font-medium text-foreground">{e.employeeName}</td>
+                    {!isEmployee && <td className="px-5 py-3 font-medium text-foreground">{e.employeeName}</td>}
                     <td className="px-4 py-3 text-muted-foreground">{e.planName}</td>
                     <td className="px-4 py-3 text-muted-foreground">{e.enrolledAt ? new Date(e.enrolledAt).toLocaleDateString() : "—"}</td>
                     <td className="px-4 py-3">
@@ -135,7 +154,7 @@ export default function Benefits() {
       </div>
 
       {/* Add Plan Modal */}
-      {showPlanModal && (
+      {showPlanModal && !isEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-5">
@@ -162,7 +181,7 @@ export default function Benefits() {
       )}
 
       {/* Enroll Modal */}
-      {showEnrollModal && (
+      {showEnrollModal && !isEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
             <div className="flex items-center justify-between mb-5">

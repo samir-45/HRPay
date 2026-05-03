@@ -9,6 +9,7 @@ import {
   getListEmployeesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/auth-context";
 import { CheckCircle2, Circle, Plus, X } from "lucide-react";
 
 const PRIORITY_STYLES: Record<string, string> = {
@@ -27,11 +28,16 @@ const CATEGORY_STYLES: Record<string, string> = {
 
 export default function Onboarding() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isEmployee = user?.role === "employee";
+
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ employeeId: "", title: "", description: "", category: "documentation", dueDate: "", priority: "medium", assignedTo: "" });
 
   const { data: tasks, isLoading } = useListOnboardingTasks({}, { query: { queryKey: getListOnboardingTasksQueryKey({}) } });
-  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }) } });
+  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, {
+    query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
+  });
 
   const completeMut = useCompleteOnboardingTask({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListOnboardingTasksQueryKey({}) }) } });
   const createMut = useCreateOnboardingTask({
@@ -48,7 +54,6 @@ export default function Onboarding() {
 
   const taskList = tasks ?? [];
 
-  // Group by employee
   const grouped = taskList.reduce<Record<string, { name: string; tasks: typeof taskList }>>((acc, t) => {
     const key = String(t.employeeId);
     if (!acc[key]) acc[key] = { name: t.employeeName ?? "Unknown", tasks: [] };
@@ -65,9 +70,11 @@ export default function Onboarding() {
           <h2 className="text-lg font-semibold">Onboarding</h2>
           <p className="text-sm text-muted-foreground">{taskList.filter(t => !t.isCompleted).length} open tasks across {Object.keys(grouped).length} employees</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
-          <Plus className="h-4 w-4" /> Add Task
-        </button>
+        {!isEmployee && (
+          <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
+            <Plus className="h-4 w-4" /> Add Task
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -127,7 +134,7 @@ export default function Onboarding() {
         </div>
       )}
 
-      {showModal && (
+      {showModal && !isEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">

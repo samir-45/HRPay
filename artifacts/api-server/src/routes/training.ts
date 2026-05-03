@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { coursesTable, enrollmentsTable, employeesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import { requireNonEmployee } from "../lib/auth-helpers";
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.get("/training/courses/:id", async (req, res) => {
 });
 
 router.post("/training/courses", async (req, res) => {
+  if (!requireNonEmployee(req, res)) return;
   const { title, description, category, durationHours, instructor, provider, isRequired } = req.body;
   if (!title) return res.status(400).json({ error: "title is required" });
   const [course] = await db.insert(coursesTable).values({
@@ -45,6 +47,7 @@ router.post("/training/courses", async (req, res) => {
 });
 
 router.patch("/training/courses/:id", async (req, res) => {
+  if (!requireNonEmployee(req, res)) return;
   const { title, description, category, durationHours, instructor, provider, isRequired, status } = req.body;
   const update: Record<string, unknown> = {};
   if (title !== undefined) update.title = title;

@@ -15,6 +15,9 @@ import { usePermissions, FeatureKey } from "@/components/permissions-context";
 import { useSubscription } from "@/components/subscription-context";
 import { PLAN_LABELS, PLAN_COLORS, requiredPlanFor } from "@/lib/plan-features";
 
+const ADMIN_ROLES = ["company_admin", "ceoo", "manager", "supervisor"];
+const MANAGER_ROLES = ["company_admin", "ceoo", "manager"];
+
 type NavItem = {
   name: string;
   href: string;
@@ -24,25 +27,25 @@ type NavItem = {
 };
 
 const baseNavigation: NavItem[] = [
-  { name: "Dashboard",         href: "/dashboard",     icon: LayoutDashboard, roles: null,                                           feature: null },
-  { name: "Permissions",       href: "/permissions",   icon: LockKeyhole,     roles: ["company_admin"],                              feature: null },
-  { name: "Team",              href: "/team",          icon: UserCog,         roles: ["company_admin", "ceoo", "manager"],           feature: "team" },
-  { name: "Employees",         href: "/employees",     icon: Users,           roles: null,                                           feature: "employees" },
-  { name: "Payroll",           href: "/payroll",       icon: Calculator,      roles: null,                                           feature: "payroll" },
-  { name: "Time & Attendance", href: "/time",          icon: Clock,           roles: null,                                           feature: "time" },
-  { name: "Leave Management",  href: "/leave",         icon: CalendarDays,    roles: null,                                           feature: "leave" },
-  { name: "Recruitment",       href: "/recruitment",   icon: Briefcase,       roles: null,                                           feature: "recruitment" },
-  { name: "Performance",       href: "/performance",   icon: Target,          roles: null,                                           feature: "performance" },
-  { name: "Benefits",          href: "/benefits",      icon: Shield,          roles: null,                                           feature: "benefits" },
-  { name: "Onboarding",        href: "/onboarding",    icon: ListTodo,        roles: null,                                           feature: "onboarding" },
-  { name: "Departments",       href: "/departments",   icon: Building2,       roles: null,                                           feature: "departments" },
-  { name: "Announcements",     href: "/announcements", icon: Megaphone,       roles: null,                                           feature: "announcements" },
-  { name: "Expenses",          href: "/expenses",      icon: Receipt,         roles: null,                                           feature: "expenses" },
-  { name: "Assets",            href: "/assets",        icon: Package,         roles: null,                                           feature: "assets" },
-  { name: "Training",          href: "/training",      icon: GraduationCap,   roles: null,                                           feature: "training" },
-  { name: "Org Chart",         href: "/org-chart",     icon: Network,         roles: null,                                           feature: "org-chart" },
-  { name: "Reports",           href: "/reports",       icon: BarChart3,       roles: null,                                           feature: "reports" },
-  { name: "Settings",          href: "/settings",      icon: Settings,        roles: null,                                           feature: null },
+  { name: "Dashboard",         href: "/dashboard",     icon: LayoutDashboard, roles: null,                feature: null },
+  { name: "Permissions",       href: "/permissions",   icon: LockKeyhole,     roles: ["company_admin"],   feature: null },
+  { name: "Team",              href: "/team",          icon: UserCog,         roles: MANAGER_ROLES,       feature: "team" },
+  { name: "Employees",         href: "/employees",     icon: Users,           roles: ADMIN_ROLES,         feature: "employees" },
+  { name: "Payroll",           href: "/payroll",       icon: Calculator,      roles: ADMIN_ROLES,         feature: "payroll" },
+  { name: "Time & Attendance", href: "/time",          icon: Clock,           roles: null,                feature: "time" },
+  { name: "Leave Management",  href: "/leave",         icon: CalendarDays,    roles: null,                feature: "leave" },
+  { name: "Recruitment",       href: "/recruitment",   icon: Briefcase,       roles: ADMIN_ROLES,         feature: "recruitment" },
+  { name: "Performance",       href: "/performance",   icon: Target,          roles: null,                feature: "performance" },
+  { name: "Benefits",          href: "/benefits",      icon: Shield,          roles: null,                feature: "benefits" },
+  { name: "Onboarding",        href: "/onboarding",    icon: ListTodo,        roles: MANAGER_ROLES,       feature: "onboarding" },
+  { name: "Departments",       href: "/departments",   icon: Building2,       roles: MANAGER_ROLES,       feature: "departments" },
+  { name: "Announcements",     href: "/announcements", icon: Megaphone,       roles: null,                feature: "announcements" },
+  { name: "Expenses",          href: "/expenses",      icon: Receipt,         roles: null,                feature: "expenses" },
+  { name: "Assets",            href: "/assets",        icon: Package,         roles: null,                feature: "assets" },
+  { name: "Training",          href: "/training",      icon: GraduationCap,   roles: null,                feature: "training" },
+  { name: "Org Chart",         href: "/org-chart",     icon: Network,         roles: null,                feature: "org-chart" },
+  { name: "Reports",           href: "/reports",       icon: BarChart3,       roles: ADMIN_ROLES,         feature: "reports" },
+  { name: "Settings",          href: "/settings",      icon: Settings,        roles: null,                feature: null },
 ];
 
 interface Announcement {

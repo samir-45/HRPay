@@ -10,6 +10,7 @@ import {
   ListLeaveBalancesQueryParams,
 } from "@workspace/api-zod";
 import { notify } from "../lib/notify";
+import { requireNonEmployee } from "../lib/auth-helpers";
 
 const router = Router();
 
@@ -62,7 +63,6 @@ router.post("/leave/requests", async (req, res) => {
     .values({ ...body, days: days.toString() })
     .returning();
 
-  // Look up employee name for a richer notification
   const [emp] = await db
     .select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
     .from(employeesTable)
@@ -78,6 +78,7 @@ router.post("/leave/requests", async (req, res) => {
 });
 
 router.post("/leave/requests/:id/approve", async (req, res) => {
+  if (!requireNonEmployee(req, res)) return;
   const { id } = ApproveLeaveRequestParams.parse({ id: Number(req.params.id) });
   const [updated] = await db
     .update(leaveRequestsTable)
@@ -101,6 +102,7 @@ router.post("/leave/requests/:id/approve", async (req, res) => {
 });
 
 router.post("/leave/requests/:id/reject", async (req, res) => {
+  if (!requireNonEmployee(req, res)) return;
   const { id } = RejectLeaveRequestParams.parse({ id: Number(req.params.id) });
   const [updated] = await db
     .update(leaveRequestsTable)

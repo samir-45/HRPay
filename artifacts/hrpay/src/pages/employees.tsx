@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { SkeletonEmployeeTableRows } from "@/components/skeletons";
 import { useListEmployees, useListDepartments, useDeleteEmployee, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/auth-context";
 import { Search, Plus, LayoutGrid, List, Trash2, Eye } from "lucide-react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "@/components/ui/sonner";
@@ -38,6 +39,8 @@ export default function Employees() {
   const [view, setView] = useState<"table" | "grid">("table");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isEmployee = user?.role === "employee";
 
   const params = { page: 1, limit: 100, ...(search && { search }), ...(dept && { department: dept }), ...(status && { status: status as "active" | "inactive" | "on_leave" | "terminated" }) };
   const { data, isLoading } = useListEmployees(params, { query: { queryKey: getListEmployeesQueryKey(params) } });
@@ -62,9 +65,11 @@ export default function Employees() {
           <h2 className="text-lg font-semibold">Employee Directory</h2>
           <p className="text-sm text-muted-foreground">{data?.total ?? 0} employees</p>
         </div>
-        <Link href="/employees/new" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
-          <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Employee</span>
-        </Link>
+        {!isEmployee && (
+          <Link href="/employees/new" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
+            <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Employee</span>
+          </Link>
+        )}
       </div>
 
       {/* Filters */}
@@ -113,7 +118,7 @@ export default function Employees() {
       ) : employees.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <p className="text-sm">No employees found.</p>
-          <Link href="/employees/new" className="mt-3 text-sm text-primary hover:underline">Add the first employee</Link>
+          {!isEmployee && <Link href="/employees/new" className="mt-3 text-sm text-primary hover:underline">Add the first employee</Link>}
         </div>
       ) : view === "table" ? (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
@@ -154,12 +159,14 @@ export default function Employees() {
                       <Link href={`/employees/${emp.id}`} className="p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                         <Eye className="h-4 w-4" />
                       </Link>
-                      <button
-                        onClick={() => setDeleteTarget({ id: emp.id, name: `${emp.firstName} ${emp.lastName}` })}
-                        className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {!isEmployee && (
+                        <button
+                          onClick={() => setDeleteTarget({ id: emp.id, name: `${emp.firstName} ${emp.lastName}` })}
+                          className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -189,14 +196,16 @@ export default function Employees() {
         </div>
       )}
 
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        title="Delete employee?"
-        description={`${deleteTarget?.name ?? "This employee"} will be permanently removed from the system. This action cannot be undone.`}
-        confirmLabel="Delete Employee"
-        onConfirm={() => { if (deleteTarget) deleteMut.mutate({ id: deleteTarget.id }); }}
-        onCancel={() => setDeleteTarget(null)}
-      />
+      {!isEmployee && (
+        <ConfirmDialog
+          open={deleteTarget !== null}
+          title="Delete employee?"
+          description={`${deleteTarget?.name ?? "This employee"} will be permanently removed from the system. This action cannot be undone.`}
+          confirmLabel="Delete Employee"
+          onConfirm={() => { if (deleteTarget) deleteMut.mutate({ id: deleteTarget.id }); }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }

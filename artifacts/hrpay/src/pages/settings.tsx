@@ -14,10 +14,15 @@ interface CompanySettings {
   workingHoursPerDay: number; workingDaysPerWeek: number; logoUrl: string;
 }
 
-const TABS = [
+const ADMIN_TABS = [
   { id: "company", label: "Company", icon: Building2 },
   { id: "payroll", label: "Payroll", icon: CreditCard },
   { id: "locale", label: "Locale", icon: Globe },
+  { id: "security", label: "Security", icon: Shield },
+  { id: "notifications", label: "Notifications", icon: Bell },
+];
+
+const EMPLOYEE_TABS = [
   { id: "security", label: "Security", icon: Shield },
   { id: "notifications", label: "Notifications", icon: Bell },
 ];
@@ -125,7 +130,6 @@ function SecurityTab() {
     <div className="space-y-6">
       <h3 className="font-bold text-foreground">Security Settings</h3>
 
-      {/* Change Password */}
       <div className="rounded-xl border border-border p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <KeyRound className="h-4 w-4 text-muted-foreground" />
@@ -158,7 +162,6 @@ function SecurityTab() {
         </form>
       </div>
 
-      {/* Security Toggles */}
       <div className="space-y-3">
         {TOGGLES.map((item, idx) => (
           <div key={item.label} className="flex items-center justify-between rounded-xl border border-border p-4">
@@ -204,10 +207,17 @@ function NotificationsTab() {
 export default function Settings() {
   const { token, user } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState("company");
+  const isEmployee = user?.role === "employee";
+
+  const TABS = isEmployee ? EMPLOYEE_TABS : ADMIN_TABS;
+  const [tab, setTab] = useState(isEmployee ? "security" : "company");
   const [saved, setSaved] = useState(false);
 
-  const settings = useQuery<CompanySettings>({ queryKey: ["settings"], queryFn: () => fetch(`${API}/settings`, { headers: apiHeaders(token) }).then(r => r.json()) });
+  const settings = useQuery<CompanySettings>({
+    queryKey: ["settings"],
+    queryFn: () => fetch(`${API}/settings`, { headers: apiHeaders(token) }).then(r => r.json()),
+    enabled: !isEmployee,
+  });
   const [form, setForm] = useState<Partial<CompanySettings>>({});
 
   const currentSettings: CompanySettings = { ...settings.data, ...form } as CompanySettings;
@@ -223,16 +233,17 @@ export default function Settings() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground">Settings</h2>
-          <p className="text-sm text-muted-foreground">Configure your HRPay workspace</p>
+          <p className="text-sm text-muted-foreground">{isEmployee ? "Manage your account preferences" : "Configure your HRPay workspace"}</p>
         </div>
-        <button onClick={() => save.mutate()} disabled={Object.keys(form).length === 0 || save.isPending} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground disabled:opacity-40 transition-all hover:opacity-90" style={{ background: LIME }}>
-          <Save className="h-4 w-4" />
-          {saved ? "Saved!" : save.isPending ? "Saving…" : "Save Changes"}
-        </button>
+        {!isEmployee && (
+          <button onClick={() => save.mutate()} disabled={Object.keys(form).length === 0 || save.isPending} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground disabled:opacity-40 transition-all hover:opacity-90" style={{ background: LIME }}>
+            <Save className="h-4 w-4" />
+            {saved ? "Saved!" : save.isPending ? "Saving…" : "Save Changes"}
+          </button>
+        )}
       </div>
 
       <div className="flex gap-5">
-        {/* Sidebar tabs */}
         <div className="w-48 shrink-0 space-y-1">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${tab === t.id ? "text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white"}`} style={tab === t.id ? { background: LIME } : {}}>
@@ -241,9 +252,8 @@ export default function Settings() {
           ))}
         </div>
 
-        {/* Content */}
         <div className="flex-1 rounded-2xl border border-border bg-white p-6 shadow-sm">
-          {settings.isLoading ? (
+          {settings.isLoading && !isEmployee ? (
             <SkeletonSettingsForm />
           ) : tab === "company" ? (
             <div className="space-y-4">
@@ -295,7 +305,6 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Current user info */}
       <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
         <p className="text-sm font-bold text-foreground mb-3">Signed in as</p>
         <div className="flex items-center gap-3">

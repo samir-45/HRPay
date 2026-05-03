@@ -44,14 +44,17 @@ interface Enrollment {
 }
 
 export default function Training() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isEmployee = user?.role === "employee";
+  const myEmployeeId = user?.employeeId;
+
   const qc = useQueryClient();
   const [tab, setTab] = useState<"courses" | "enrollments">("courses");
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showEnrollForm, setShowEnrollForm] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [courseForm, setCourseForm] = useState({ title: "", description: "", category: "general", durationHours: "", instructor: "", provider: "", isRequired: false });
-  const [enrollForm, setEnrollForm] = useState({ courseId: "", employeeId: "", dueDate: "" });
+  const [enrollForm, setEnrollForm] = useState({ courseId: "", employeeId: myEmployeeId ? String(myEmployeeId) : "" });
 
   const courses = useQuery<Course[]>({
     queryKey: ["courses"],
@@ -61,7 +64,9 @@ export default function Training() {
     queryKey: ["enrollments"],
     queryFn: () => fetch(`${API}/training/enrollments`, { headers: apiHeaders(token) }).then(r => r.json()),
   });
-  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }) } });
+  const { data: empData } = useListEmployees({ page: 1, limit: 100 }, {
+    query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }), enabled: !isEmployee },
+  });
 
   const createCourse = useMutation({
     mutationFn: () => fetch(`${API}/training/courses`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(courseForm) }).then(r => r.json()),
@@ -70,7 +75,7 @@ export default function Training() {
 
   const createEnrollment = useMutation({
     mutationFn: () => fetch(`${API}/training/enrollments`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(enrollForm) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["enrollments"] }); setShowEnrollForm(false); setEnrollForm({ courseId: "", employeeId: "", dueDate: "" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["enrollments"] }); setShowEnrollForm(false); setEnrollForm({ courseId: "", employeeId: myEmployeeId ? String(myEmployeeId) : "" }); },
   });
 
   const updateEnrollment = useMutation({
@@ -79,8 +84,12 @@ export default function Training() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["enrollments"] }),
   });
 
-  const completionRate = enrollments.data
-    ? Math.round(((enrollments.data.filter(e => e.status === "completed").length) / Math.max(enrollments.data.length, 1)) * 100)
+  const myEnrollments = isEmployee && myEmployeeId
+    ? (enrollments.data ?? []).filter(e => e.employeeId === myEmployeeId)
+    : (enrollments.data ?? []);
+
+  const completionRate = myEnrollments.length > 0
+    ? Math.round((myEnrollments.filter(e => e.status === "completed").length / myEnrollments.length) * 100)
     : 0;
 
   return (
@@ -89,15 +98,25 @@ export default function Training() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground">Training & Development</h2>
-          <p className="text-sm text-muted-foreground">Manage courses, enrollments and learning progress</p>
+          <p className="text-sm text-muted-foreground">
+            {isEmployee ? "Browse courses and track your learning progress" : "Manage courses, enrollments and learning progress"}
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowEnrollForm(true)} className="flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors">
-            <Users className="h-4 w-4" /> Enroll
-          </button>
-          <button onClick={() => setShowCourseForm(true)} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground hover:opacity-90 transition-all" style={{ background: LIME }}>
-            <Plus className="h-4 w-4" /> New Course
-          </button>
+          {!isEmployee && (
+            <button onClick={() => setShowEnrollForm(true)} className="flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors">
+              <Users className="h-4 w-4" /> Enroll
+            </button>
+          )}
+          {isEmployee ? (
+            <button onClick={() => setShowEnrollForm(true)} className="flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors">
+              <Plus className="h-4 w-4" /> Enroll in Course
+            </button>
+          ) : (
+            <button onClick={() => setShowCourseForm(true)} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground hover:opacity-90 transition-all" style={{ background: LIME }}>
+              <Plus className="h-4 w-4" /> New Course
+            </button>
+          )}
         </div>
       </div>
 
@@ -105,8 +124,8 @@ export default function Training() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Courses", value: courses.data?.length ?? 0, hero: true },
-          { label: "Total Enrollments", value: enrollments.data?.length ?? 0 },
-          { label: "Completed", value: enrollments.data?.filter(e => e.status === "completed").length ?? 0 },
+          { label: isEmployee ? "My Enrollments" : "Total Enrollments", value: myEnrollments.length },
+          { label: "Completed", value: myEnrollments.filter(e => e.status === "completed").length },
           { label: "Completion Rate", value: `${completionRate}%` },
         ].map(({ label, value, hero }) => (
           <div key={label} className="rounded-2xl p-4 shadow-sm" style={{ background: hero ? LIME : "white", border: hero ? "none" : "1px solid hsl(220 15% 91%)" }}>
@@ -130,12 +149,12 @@ export default function Training() {
           <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center">
             <GraduationCap className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm font-medium text-foreground mb-1">No courses yet</p>
-            <p className="text-xs text-muted-foreground">Add your first course to start training employees</p>
+            <p className="text-xs text-muted-foreground">No training courses are available yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(courses.data ?? []).map(course => {
-              const courseEnrollments = (enrollments.data ?? []).filter(e => e.courseId === course.id);
+              const courseEnrollments = myEnrollments.filter(e => e.courseId === course.id);
               const completed = courseEnrollments.filter(e => e.status === "completed").length;
               return (
                 <div key={course.id} className="rounded-2xl border border-border bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
@@ -157,7 +176,13 @@ export default function Training() {
                   </div>
                   <div className="pt-3 border-t border-border flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">
-                      <span className="font-semibold text-foreground">{completed}</span>/{courseEnrollments.length} completed
+                      {isEmployee ? (
+                        courseEnrollments.length > 0
+                          ? <span className={`font-semibold ${courseEnrollments[0].status === "completed" ? "text-lime-600" : "text-blue-600"}`}>{courseEnrollments[0].status.replace("_", " ")}</span>
+                          : <span>Not enrolled</span>
+                      ) : (
+                        <><span className="font-semibold text-foreground">{completed}</span>/{courseEnrollments.length} completed</>
+                      )}
                     </div>
                     <button onClick={() => setSelectedCourse(course)} className="rounded-lg px-2.5 py-1 text-xs font-medium border border-border hover:bg-muted transition-colors">View</button>
                   </div>
@@ -174,21 +199,23 @@ export default function Training() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Employee", "Course", "Category", "Progress", "Status", "Due Date", "Actions"].map(h => (
+                {(!isEmployee ? ["Employee", "Course", "Category", "Progress", "Status", "Due Date", "Actions"] : ["Course", "Category", "Progress", "Status", "Due Date", "Actions"]).map(h => (
                   <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {enrollments.isLoading ? (
-                <SkeletonTableRows rows={5} cols={7} />
-              ) : (enrollments.data ?? []).length === 0 ? (
-                <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">No enrollments yet</td></tr>
-              ) : (enrollments.data ?? []).map(enrollment => {
+                <SkeletonTableRows rows={5} cols={isEmployee ? 6 : 7} />
+              ) : myEnrollments.length === 0 ? (
+                <tr><td colSpan={isEmployee ? 6 : 7} className="py-12 text-center text-muted-foreground text-sm">
+                  {isEmployee ? "You are not enrolled in any courses yet." : "No enrollments yet"}
+                </td></tr>
+              ) : myEnrollments.map(enrollment => {
                 const ss = STATUS_LABELS[enrollment.status] ?? STATUS_LABELS.enrolled;
                 return (
                   <tr key={enrollment.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                    <td className="py-3 px-4 font-medium">{enrollment.firstName} {enrollment.lastName}</td>
+                    {!isEmployee && <td className="py-3 px-4 font-medium">{enrollment.firstName} {enrollment.lastName}</td>}
                     <td className="py-3 px-4">{enrollment.courseTitle}</td>
                     <td className="py-3 px-4"><span className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{(enrollment.courseCategory ?? "").replace("_", " ")}</span></td>
                     <td className="py-3 px-4">
@@ -226,8 +253,8 @@ export default function Training() {
         </div>
       )}
 
-      {/* New Course Modal */}
-      {showCourseForm && (
+      {/* New Course Modal (admin only) */}
+      {showCourseForm && !isEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4">
             <div className="flex items-center justify-between mb-5">
@@ -283,27 +310,25 @@ export default function Training() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 mx-4">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-foreground">Enroll Employee</h3>
+              <h3 className="font-bold text-foreground">{isEmployee ? "Enroll in Course" : "Enroll Employee"}</h3>
               <button onClick={() => setShowEnrollForm(false)} className="rounded-xl p-1.5 hover:bg-muted"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Employee</label>
-                <select value={enrollForm.employeeId} onChange={e => setEnrollForm(p => ({ ...p, employeeId: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm">
-                  <option value="">Select employee…</option>
-                  {(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                </select>
-              </div>
+              {!isEmployee && (
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Employee</label>
+                  <select value={enrollForm.employeeId} onChange={e => setEnrollForm(p => ({ ...p, employeeId: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm">
+                    <option value="">Select employee…</option>
+                    {(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium block mb-1.5">Course</label>
                 <select value={enrollForm.courseId} onChange={e => setEnrollForm(p => ({ ...p, courseId: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm">
                   <option value="">Select course…</option>
                   {(courses.data ?? []).filter(c => c.status === "active").map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Due Date (optional)</label>
-                <input type="date" value={enrollForm.dueDate} onChange={e => setEnrollForm(p => ({ ...p, dueDate: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm" />
               </div>
             </div>
             <div className="flex gap-2.5 mt-5">
@@ -328,31 +353,54 @@ export default function Training() {
               <button onClick={() => setSelectedCourse(null)} className="rounded-xl p-1.5 hover:bg-muted shrink-0"><X className="h-4 w-4" /></button>
             </div>
             {selectedCourse.description && <p className="text-sm text-muted-foreground mb-4">{selectedCourse.description}</p>}
-            <div className="space-y-2">
-              {(enrollments.data ?? []).filter(e => e.courseId === selectedCourse.id).map(e => {
-                const ss = STATUS_LABELS[e.status] ?? STATUS_LABELS.enrolled;
-                return (
-                  <div key={e.id} className="flex items-center gap-3 rounded-xl bg-muted/40 px-3 py-2.5">
-                    <div className="size-7 rounded-full bg-foreground flex items-center justify-center text-white text-[10px] font-bold shrink-0">
-                      {(e.firstName?.[0] ?? "") + (e.lastName?.[0] ?? "")}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{e.firstName} {e.lastName}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <div className="h-1 rounded-full bg-white overflow-hidden flex-1">
-                          <div className="h-full rounded-full" style={{ width: `${e.progress ?? 0}%`, background: LIME }} />
+            {!isEmployee && (
+              <div className="space-y-2">
+                {(enrollments.data ?? []).filter(e => e.courseId === selectedCourse.id).map(e => {
+                  const ss = STATUS_LABELS[e.status] ?? STATUS_LABELS.enrolled;
+                  return (
+                    <div key={e.id} className="flex items-center gap-3 rounded-xl bg-muted/40 px-3 py-2.5">
+                      <div className="size-7 rounded-full bg-foreground flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                        {(e.firstName?.[0] ?? "") + (e.lastName?.[0] ?? "")}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{e.firstName} {e.lastName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div className="h-1 rounded-full bg-white overflow-hidden flex-1">
+                            <div className="h-full rounded-full" style={{ width: `${e.progress ?? 0}%`, background: LIME }} />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">{e.progress ?? 0}%</span>
                         </div>
-                        <span className="text-[10px] text-muted-foreground">{e.progress ?? 0}%</span>
+                      </div>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${ss.bg} ${ss.text}`}>{ss.label}</span>
+                    </div>
+                  );
+                })}
+                {(enrollments.data ?? []).filter(e => e.courseId === selectedCourse.id).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No enrollments yet</p>
+                )}
+              </div>
+            )}
+            {isEmployee && (
+              <div className="mt-2">
+                {myEnrollments.filter(e => e.courseId === selectedCourse.id).map(e => {
+                  const ss = STATUS_LABELS[e.status] ?? STATUS_LABELS.enrolled;
+                  return (
+                    <div key={e.id} className="rounded-xl bg-muted/40 px-4 py-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ss.bg} ${ss.text}`}>{ss.label}</span>
+                        <span className="text-xs text-muted-foreground">{e.progress ?? 0}% complete</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${e.progress ?? 0}%`, background: LIME }} />
                       </div>
                     </div>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${ss.bg} ${ss.text}`}>{ss.label}</span>
-                  </div>
-                );
-              })}
-              {(enrollments.data ?? []).filter(e => e.courseId === selectedCourse.id).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">No enrollments yet</p>
-              )}
-            </div>
+                  );
+                })}
+                {myEnrollments.filter(e => e.courseId === selectedCourse.id).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">You are not enrolled in this course.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ export interface AuthUser {
   name: string;
   role: string;
   companyId: number | null;
+  employeeId: number | null;
 }
 
 interface AuthContextValue {

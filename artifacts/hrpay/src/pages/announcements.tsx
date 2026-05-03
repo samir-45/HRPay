@@ -9,25 +9,18 @@ const LIME = "hsl(82 80% 48%)";
 
 interface Announcement { id: number; title: string; content: string; type: string; target: string; isPinned: boolean; publishedBy?: string; createdAt: string; }
 
-const TYPE_STYLE: Record<string, string> = {
-  info: "bg-blue-100 text-blue-700",
-  warning: "bg-yellow-100 text-yellow-700",
-  urgent: "bg-red-100 text-red-700",
-  success: "bg-green-100 text-green-700",
-  celebration: "text-foreground",
-};
-
 export default function Announcements() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isEmployee = user?.role === "employee";
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: "Admin" });
+  const [form, setForm] = useState({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" });
 
   const announcements = useQuery<Announcement[]>({ queryKey: ["announcements"], queryFn: () => fetch(`${API}/announcements`, { headers: apiHeaders(token) }).then(r => r.json()) });
 
   const create = useMutation({
     mutationFn: () => fetch(`${API}/announcements`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(form) }).then(r => r.json()),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["announcements"] }); setShowForm(false); setForm({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: "Admin" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["announcements"] }); setShowForm(false); setForm({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" }); },
   });
 
   const remove = useMutation({
@@ -50,9 +43,11 @@ export default function Announcements() {
           <h2 className="text-xl font-bold text-foreground">Announcements</h2>
           <p className="text-sm text-muted-foreground">Company-wide communications & updates</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground hover:opacity-90 transition-all" style={{ background: LIME }}>
-          <Plus className="h-4 w-4" /> New Announcement
-        </button>
+        {!isEmployee && (
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground hover:opacity-90 transition-all" style={{ background: LIME }}>
+            <Plus className="h-4 w-4" /> New Announcement
+          </button>
+        )}
       </div>
 
       {/* Pinned */}
@@ -60,7 +55,13 @@ export default function Announcements() {
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5"><Pin className="h-3 w-3" /> Pinned</p>
           <div className="space-y-3">
-            {pinned.map(a => <AnnouncementCard key={a.id} a={a} onRemove={() => remove.mutate(a.id)} onPin={() => pin.mutate({ id: a.id, isPinned: false })} />)}
+            {pinned.map(a => (
+              <AnnouncementCard
+                key={a.id} a={a} isEmployee={isEmployee}
+                onRemove={() => remove.mutate(a.id)}
+                onPin={() => pin.mutate({ id: a.id, isPinned: false })}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -73,17 +74,23 @@ export default function Announcements() {
         ) : (announcements.data ?? []).length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-white/50 p-10 text-center">
             <Megaphone className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No announcements yet. Post your first company update.</p>
+            <p className="text-sm text-muted-foreground">No announcements yet.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {regular.map(a => <AnnouncementCard key={a.id} a={a} onRemove={() => remove.mutate(a.id)} onPin={() => pin.mutate({ id: a.id, isPinned: true })} />)}
+            {regular.map(a => (
+              <AnnouncementCard
+                key={a.id} a={a} isEmployee={isEmployee}
+                onRemove={() => remove.mutate(a.id)}
+                onPin={() => pin.mutate({ id: a.id, isPinned: true })}
+              />
+            ))}
           </div>
         )}
       </div>
 
       {/* New Announcement Modal */}
-      {showForm && (
+      {showForm && !isEmployee && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
             <div className="flex items-center justify-between mb-4">
@@ -138,7 +145,7 @@ export default function Announcements() {
   );
 }
 
-function AnnouncementCard({ a, onRemove, onPin }: { a: Announcement; onRemove: () => void; onPin: () => void }) {
+function AnnouncementCard({ a, isEmployee, onRemove, onPin }: { a: Announcement; isEmployee: boolean; onRemove: () => void; onPin: () => void }) {
   const LIME = "hsl(82 80% 48%)";
   const typeStyle: Record<string, string> = {
     info: "bg-blue-100 text-blue-700",
@@ -162,14 +169,16 @@ function AnnouncementCard({ a, onRemove, onPin }: { a: Announcement; onRemove: (
             <span>{new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
           </div>
         </div>
-        <div className="flex gap-1">
-          <button onClick={onPin} className={`flex size-8 items-center justify-center rounded-lg transition-colors ${a.isPinned ? "text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`} style={a.isPinned ? { background: LIME } : {}}>
-            <Pin className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={onRemove} className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        {!isEmployee && (
+          <div className="flex gap-1">
+            <button onClick={onPin} className={`flex size-8 items-center justify-center rounded-lg transition-colors ${a.isPinned ? "text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`} style={a.isPinned ? { background: LIME } : {}}>
+              <Pin className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={onRemove} className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

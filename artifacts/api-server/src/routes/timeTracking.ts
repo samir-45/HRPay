@@ -8,6 +8,7 @@ import {
   ApproveTimeEntryParams,
 } from "@workspace/api-zod";
 import { notify } from "../lib/notify";
+import { requireNonEmployee } from "../lib/auth-helpers";
 
 const router = Router();
 
@@ -67,6 +68,7 @@ router.post("/time/entries", async (req, res) => {
 });
 
 router.post("/time/entries/:id/approve", async (req, res) => {
+  if (!requireNonEmployee(req, res)) return;
   const { id } = ApproveTimeEntryParams.parse({ id: Number(req.params.id) });
   const [updated] = await db
     .update(timeEntriesTable)
