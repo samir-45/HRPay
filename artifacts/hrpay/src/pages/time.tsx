@@ -332,18 +332,28 @@ export default function Time() {
 
   /* Mutations */
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["/api/time/entries"] });
+    // Invalidate all time entries queries - React Query will auto-refetch marked as stale
+    qc.invalidateQueries({ 
+      queryKey: ["/api/time/entries"],
+      refetchType: "active" // Only refetch active queries
+    });
   };
 
   const approveMut = useApproveTimeEntry({
     mutation: {
-      onSuccess: () => { invalidate(); toast.success("Time entry approved"); },
+      onSuccess: () => { 
+        invalidate(); 
+        toast.success("Time entry approved"); 
+      },
       onError: () => toast.error("Failed to approve"),
     },
   });
   const rejectMut = useRejectTimeEntry({
     mutation: {
-      onSuccess: () => { invalidate(); toast.success("Time entry rejected"); },
+      onSuccess: () => { 
+        invalidate(); 
+        toast.success("Time entry rejected"); 
+      },
       onError: () => toast.error("Failed to reject"),
     },
   });
