@@ -42,10 +42,10 @@ export default function CeooDashboard() {
   const trends = useGetPayrollTrends({ months: 6 });
   const leaveSummary = useGetLeaveSummary();
 
-  const s = summary.data;
-  const hc = headcount.data ?? [];
-  const tr = trends.data ?? [];
-  const ls = leaveSummary.data ?? [];
+  const s = summary.isError ? null : summary.data;
+  const hc = headcount.isError ? [] : (headcount.data ?? []);
+  const tr = trends.isError ? [] : (trends.data ?? []);
+  const ls = leaveSummary.isError ? [] : (leaveSummary.data ?? []);
   const totalEmployees = hc.reduce((a, d) => a + (d.fullTime ?? 0) + (d.partTime ?? 0) + (d.contractors ?? 0), 0);
 
   return (

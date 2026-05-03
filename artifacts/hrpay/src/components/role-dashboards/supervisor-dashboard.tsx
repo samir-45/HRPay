@@ -12,8 +12,8 @@ export default function SupervisorDashboard() {
   const { user } = useAuth();
   const summary = useGetDashboardSummary();
   const leaveSummary = useGetLeaveSummary();
-  const s = summary.data;
-  const ls = leaveSummary.data ?? [];
+  const s = summary.isError ? null : summary.data;
+  const ls = leaveSummary.isError ? [] : (leaveSummary.data ?? []);
 
   const approvalItems = [
     { label: "Pending leave requests", count: s?.pendingLeaveRequests ?? 0, href: "/leave", urgent: (s?.pendingLeaveRequests ?? 0) > 0 },

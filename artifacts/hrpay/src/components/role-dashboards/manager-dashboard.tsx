@@ -47,9 +47,9 @@ export default function ManagerDashboard() {
   const headcount = useGetHeadcountByDepartment();
   const leaveSummary = useGetLeaveSummary();
 
-  const s = summary.data;
-  const hc = headcount.data ?? [];
-  const ls = leaveSummary.data ?? [];
+  const s = summary.isError ? null : summary.data;
+  const hc = headcount.isError ? [] : (headcount.data ?? []);
+  const ls = leaveSummary.isError ? [] : (leaveSummary.data ?? []);
 
   return (
     <div className="space-y-6">

@@ -40,7 +40,7 @@ export default function EmployeeDashboard() {
   const events = useGetUpcomingEvents();
 
   const ls = leaveSummary.data ?? [];
-  const ev = events.data ?? [];
+  const ev = events.isError ? [] : (events.data ?? []);
   const totalLeave = ls.reduce((a, l) => a + l.count, 0);
 
   const initials = user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() ?? "ME";

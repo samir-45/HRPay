@@ -261,4 +261,40 @@ router.get("/analytics/time-overview", async (req, res) => {
   res.json({ totalHours, totalOvertime, totalEntries: entries.length, byStatus });
 });
 
+router.get("/analytics/upcoming-events", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const cid = user.companyId;
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const leaveQuery = cid
+    ? db
+        .select({ date: leaveRequestsTable.startDate, title: leaveRequestsTable.type, type: sql.raw(`'leave'`) })
+        .from(leaveRequestsTable)
+        .leftJoin(employeesTable, eq(leaveRequestsTable.employeeId, employeesTable.id))
+        .where(
+          and(
+            eq(employeesTable.companyId, cid),
+            eq(leaveRequestsTable.status, "approved"),
+            sql`DATE(${leaveRequestsTable.startDate}) >= ${now.toISOString().split("T")[0]}`,
+            sql`DATE(${leaveRequestsTable.startDate}) <= ${thirtyDaysFromNow.toISOString().split("T")[0]}`
+          )
+        )
+    : db
+        .select({ date: leaveRequestsTable.startDate, title: leaveRequestsTable.type, type: sql.raw(`'leave'`) })
+        .from(leaveRequestsTable)
+        .where(
+          and(
+            eq(leaveRequestsTable.status, "approved"),
+            sql`DATE(${leaveRequestsTable.startDate}) >= ${now.toISOString().split("T")[0]}`,
+            sql`DATE(${leaveRequestsTable.startDate}) <= ${thirtyDaysFromNow.toISOString().split("T")[0]}`
+          )
+        );
+
+  const events = await leaveQuery;
+  res.json(events || []);
+});
+
 export default router;
