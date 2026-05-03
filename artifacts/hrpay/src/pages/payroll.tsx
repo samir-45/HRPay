@@ -7,6 +7,7 @@ import {
   getListPayrollRunsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePermissions } from "@/components/permissions-context";
 import { Plus, X } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -23,6 +24,8 @@ function fmt(n: number | null | undefined) {
 
 export default function Payroll() {
   const qc = useQueryClient();
+  const { hasPower } = usePermissions();
+  const canProcess = hasPower("process_payroll");
   const { data: runs, isLoading } = useListPayrollRuns({}, { query: { queryKey: getListPayrollRunsQueryKey({}) } });
   const createMut = useCreatePayrollRun({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListPayrollRunsQueryKey({}) }) } });
   const [showModal, setShowModal] = useState(false);
@@ -49,9 +52,11 @@ export default function Payroll() {
           <h2 className="text-lg font-semibold">Payroll Runs</h2>
           <p className="text-sm text-muted-foreground">{allRuns.length} total runs</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
-          <Plus className="h-4 w-4" /><span className="hidden sm:inline">New Payroll Run</span>
-        </button>
+        {canProcess && (
+          <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
+            <Plus className="h-4 w-4" /><span className="hidden sm:inline">New Payroll Run</span>
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -158,14 +163,14 @@ export default function Payroll() {
           {allRuns.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-white rounded-xl border border-border">
               <p className="text-sm">No payroll runs yet.</p>
-              <button onClick={() => setShowModal(true)} className="mt-3 text-sm text-primary hover:underline">Create the first run</button>
+              {canProcess && <button onClick={() => setShowModal(true)} className="mt-3 text-sm text-primary hover:underline">Create the first run</button>}
             </div>
           )}
         </div>
       )}
 
       {/* Modal */}
-      {showModal && (
+      {showModal && canProcess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-5">

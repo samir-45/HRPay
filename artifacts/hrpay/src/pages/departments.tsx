@@ -7,6 +7,7 @@ import {
   getListDepartmentsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePermissions } from "@/components/permissions-context";
 import { Plus, X, Pencil, Trash2, Building2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "@/components/ui/sonner";
@@ -18,6 +19,8 @@ function fmt(n: number | null | undefined) {
 
 export default function Departments() {
   const qc = useQueryClient();
+  const { hasPower } = usePermissions();
+  const canManageDepts = hasPower("manage_departments");
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: "", description: "", budget: "" });
@@ -76,9 +79,11 @@ export default function Departments() {
           <h2 className="text-lg font-semibold">Departments</h2>
           <p className="text-sm text-muted-foreground">{deptList.length} departments</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 shrink-0">
-          <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Department</span>
-        </button>
+        {canManageDepts && (
+          <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 shrink-0">
+            <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Department</span>
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -105,15 +110,17 @@ export default function Departments() {
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <Building2 className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex gap-1">
-                  <button onClick={() => openEdit(d)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50"><Pencil className="h-3.5 w-3.5" /></button>
-                  <button
-                    onClick={() => setDeleteTarget({ id: d.id, name: d.name })}
-                    className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                {canManageDepts && (
+                  <div className="flex gap-1">
+                    <button onClick={() => openEdit(d)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button
+                      onClick={() => setDeleteTarget({ id: d.id, name: d.name })}
+                      className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div>
                 <h3 className="font-semibold text-foreground">{d.name}</h3>
@@ -134,7 +141,7 @@ export default function Departments() {
         </div>
       )}
 
-      {showModal && (
+      {showModal && canManageDepts && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-5">

@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
+import { usePermissions } from "@/components/permissions-context";
 import { Check, X, Plus, CalendarDays } from "lucide-react";
 import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
@@ -33,7 +34,9 @@ const TYPE_COLORS: Record<string, string> = {
 export default function Leave() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { hasPower } = usePermissions();
   const isEmployee = user?.role === "employee";
+  const canApproveLeave = hasPower("approve_leave");
   const myEmployeeId = user?.employeeId;
 
   const [status, setStatus] = useState("");
@@ -87,7 +90,7 @@ export default function Leave() {
         </button>
       </div>
 
-      {!isEmployee && pending.length > 0 && (
+      {canApproveLeave && pending.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-sm font-semibold text-amber-800 mb-3"><CalendarDays className="inline h-4 w-4 mr-1" />{pending.length} requests awaiting approval</p>
           <div className="space-y-2">
@@ -149,7 +152,7 @@ export default function Leave() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Period</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Days</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                {!isEmployee && <th className="text-right px-5 py-3 font-medium text-muted-foreground">Actions</th>}
+                {canApproveLeave && <th className="text-right px-5 py-3 font-medium text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -164,7 +167,7 @@ export default function Leave() {
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[r.status] ?? "bg-gray-100"}`}>{r.status}</span>
                   </td>
-                  {!isEmployee && (
+                  {canApproveLeave && (
                     <td className="px-5 py-3 text-right">
                       {r.status === "pending" && (
                         <div className="flex justify-end gap-2">

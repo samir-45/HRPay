@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
+import { usePermissions } from "@/components/permissions-context";
 import { Check, Plus, X, Clock } from "lucide-react";
 import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
@@ -22,7 +23,9 @@ const STATUS_STYLES: Record<string, string> = {
 export default function Time() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { hasPower } = usePermissions();
   const isEmployee = user?.role === "employee";
+  const canApproveTime = hasPower("approve_time");
   const myEmployeeId = user?.employeeId;
 
   const [status, setStatus] = useState("");
@@ -77,7 +80,7 @@ export default function Time() {
         </button>
       </div>
 
-      {!isEmployee && pending.length > 0 && (
+      {canApproveTime && pending.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-sm font-semibold text-amber-800 mb-2"><Clock className="inline h-4 w-4 mr-1" />{pending.length} pending entries need approval</p>
           <div className="flex flex-wrap gap-2">
@@ -127,7 +130,7 @@ export default function Time() {
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Hours</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Overtime</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                {!isEmployee && <th className="text-right px-5 py-3 font-medium text-muted-foreground">Action</th>}
+                {canApproveTime && <th className="text-right px-5 py-3 font-medium text-muted-foreground">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -140,7 +143,7 @@ export default function Time() {
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[e.status]}`}>{e.status}</span>
                   </td>
-                  {!isEmployee && (
+                  {canApproveTime && (
                     <td className="px-5 py-3 text-right">
                       {e.status === "pending" && (
                         <button onClick={() => approveMut.mutate({ id: e.id })} className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700">

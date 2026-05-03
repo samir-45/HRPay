@@ -279,7 +279,7 @@ router.get("/auth/invite/:token", async (req, res) => {
   res.json({ email: invite.email, name: invite.name, role: invite.role, status: invite.status, companyName: company?.name, expiresAt: invite.expiresAt });
 });
 
-/* ───────── Company Admin: Get Feature Permissions ───────── */
+/* ───────── Company Admin: Get Feature + Power Permissions ───────── */
 router.get("/companies/permissions", async (req, res) => {
   const user = requireAuth(req, res);
   if (!user) return;
@@ -288,35 +288,76 @@ router.get("/companies/permissions", async (req, res) => {
   const [company] = await db.select({ featurePermissions: companiesTable.featurePermissions })
     .from(companiesTable).where(eq(companiesTable.id, user.companyId));
 
-  const DEFAULT_PERMISSIONS = {
+  const DEFAULT_FEATURES = {
     ceoo:       { employees:true,  payroll:true,  time:true,  leave:true,  recruitment:true,  performance:true,  benefits:true,  onboarding:true,  departments:true,  announcements:true,  expenses:true,  assets:true,  training:true, "org-chart":true,  reports:true,  team:false },
     manager:    { employees:true,  payroll:false, time:true,  leave:true,  recruitment:true,  performance:true,  benefits:false, onboarding:true,  departments:true,  announcements:true,  expenses:true,  assets:true,  training:true, "org-chart":true,  reports:false, team:false },
     supervisor: { employees:true,  payroll:false, time:true,  leave:true,  recruitment:false, performance:false, benefits:false, onboarding:false, departments:false, announcements:true,  expenses:false, assets:false, training:true, "org-chart":true,  reports:false, team:false },
     employee:   { employees:false, payroll:false, time:true,  leave:true,  recruitment:false, performance:false, benefits:true,  onboarding:true,  departments:false, announcements:true,  expenses:true,  assets:false, training:true, "org-chart":true,  reports:false, team:false },
   };
 
-  const stored = company?.featurePermissions as Record<string, Record<string, boolean>> | null;
-  const permissions = stored
-    ? { ...DEFAULT_PERMISSIONS, ...Object.fromEntries(Object.entries(stored).map(([role, feats]) => [role, { ...(DEFAULT_PERMISSIONS as any)[role], ...feats }])) }
-    : DEFAULT_PERMISSIONS;
+  const DEFAULT_POWERS = {
+    ceoo:       { manage_employees:true,  process_payroll:true,  approve_leave:true,  approve_time:true,  approve_expenses:true,  manage_departments:true,  manage_benefits:true,  manage_recruitment:true,  manage_performance:true,  manage_training:true,  manage_assets:true,  publish_announcements:true,  view_reports:true,  invite_members:true,  edit_settings:false, manage_permissions:false },
+    manager:    { manage_employees:false, process_payroll:false, approve_leave:true,  approve_time:true,  approve_expenses:true,  manage_departments:false, manage_benefits:false, manage_recruitment:true,  manage_performance:true,  manage_training:true,  manage_assets:false, publish_announcements:true,  view_reports:true,  invite_members:false, edit_settings:false, manage_permissions:false },
+    supervisor: { manage_employees:false, process_payroll:false, approve_leave:true,  approve_time:true,  approve_expenses:false, manage_departments:false, manage_benefits:false, manage_recruitment:false, manage_performance:false, manage_training:false, manage_assets:false, publish_announcements:true,  view_reports:false, invite_members:false, edit_settings:false, manage_permissions:false },
+    employee:   { manage_employees:false, process_payroll:false, approve_leave:false, approve_time:false, approve_expenses:false, manage_departments:false, manage_benefits:false, manage_recruitment:false, manage_performance:false, manage_training:false, manage_assets:false, publish_announcements:false, view_reports:false, invite_members:false, edit_settings:false, manage_permissions:false },
+  };
 
-  res.json({ permissions });
+  const stored = company?.featurePermissions as { features?: Record<string, Record<string, boolean>>; powers?: Record<string, Record<string, boolean>> } | Record<string, Record<string, boolean>> | null;
+
+  let storedFeatures: Record<string, Record<string, boolean>> | null = null;
+  let storedPowers: Record<string, Record<string, boolean>> | null = null;
+
+  if (stored && typeof stored === "object") {
+    if ("features" in stored || "powers" in stored) {
+      storedFeatures = (stored as any).features ?? null;
+      storedPowers = (stored as any).powers ?? null;
+    } else {
+      storedFeatures = stored as Record<string, Record<string, boolean>>;
+    }
+  }
+
+  const permissions = storedFeatures
+    ? { ...DEFAULT_FEATURES, ...Object.fromEntries(Object.entries(storedFeatures).map(([role, feats]) => [role, { ...(DEFAULT_FEATURES as any)[role], ...feats }])) }
+    : DEFAULT_FEATURES;
+
+  const powers = storedPowers
+    ? { ...DEFAULT_POWERS, ...Object.fromEntries(Object.entries(storedPowers).map(([role, pwrs]) => [role, { ...(DEFAULT_POWERS as any)[role], ...pwrs }])) }
+    : DEFAULT_POWERS;
+
+  res.json({ permissions, powers });
 });
 
-/* ───────── Company Admin: Update Feature Permissions ───────── */
+/* ───────── Company Admin: Update Feature + Power Permissions ───────── */
 router.put("/companies/permissions", async (req, res) => {
   const user = requireAuth(req, res);
   if (!user) return;
   if (!user.companyId) { res.status(403).json({ error: "Not associated with a company" }); return; }
   if (!["company_admin", "super_admin"].includes(user.role)) { res.status(403).json({ error: "Only company admins can update permissions" }); return; }
 
-  const { permissions } = req.body as { permissions: Record<string, Record<string, boolean>> };
-  if (!permissions) { res.status(400).json({ error: "permissions required" }); return; }
+  const { permissions, powers } = req.body as {
+    permissions?: Record<string, Record<string, boolean>>;
+    powers?: Record<string, Record<string, boolean>>;
+  };
 
-  await db.update(companiesTable).set({ featurePermissions: permissions, updatedAt: new Date() })
+  if (!permissions && !powers) { res.status(400).json({ error: "permissions or powers required" }); return; }
+
+  const [existing] = await db.select({ featurePermissions: companiesTable.featurePermissions })
+    .from(companiesTable).where(eq(companiesTable.id, user.companyId));
+
+  const current = (existing?.featurePermissions ?? {}) as Record<string, any>;
+  const updated = {
+    ...(current.features !== undefined || current.powers !== undefined ? current : {}),
+    ...(permissions ? { features: permissions } : {}),
+    ...(powers ? { powers } : {}),
+  };
+
+  if (!updated.features && permissions) updated.features = permissions;
+  if (!updated.powers && powers) updated.powers = powers;
+
+  await db.update(companiesTable).set({ featurePermissions: updated, updatedAt: new Date() })
     .where(eq(companiesTable.id, user.companyId));
 
-  res.json({ ok: true, permissions });
+  res.json({ ok: true });
 });
 
 /* ───────── Super Admin: Platform Stats ───────── */

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { usePermissions } from "@/components/permissions-context";
 import { SkeletonAnnouncementCards } from "@/components/skeletons";
 import { Megaphone, Plus, X, Pin, Trash2 } from "lucide-react";
 
@@ -11,7 +12,9 @@ interface Announcement { id: number; title: string; content: string; type: strin
 
 export default function Announcements() {
   const { token, user } = useAuth();
+  const { hasPower } = usePermissions();
   const isEmployee = user?.role === "employee";
+  const canPublish = hasPower("publish_announcements");
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" });
@@ -43,7 +46,7 @@ export default function Announcements() {
           <h2 className="text-xl font-bold text-foreground">Announcements</h2>
           <p className="text-sm text-muted-foreground">Company-wide communications & updates</p>
         </div>
-        {!isEmployee && (
+        {canPublish && (
           <button onClick={() => setShowForm(true)} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground hover:opacity-90 transition-all" style={{ background: LIME }}>
             <Plus className="h-4 w-4" /> New Announcement
           </button>
@@ -57,7 +60,7 @@ export default function Announcements() {
           <div className="space-y-3">
             {pinned.map(a => (
               <AnnouncementCard
-                key={a.id} a={a} isEmployee={isEmployee}
+                key={a.id} a={a} canPublish={canPublish}
                 onRemove={() => remove.mutate(a.id)}
                 onPin={() => pin.mutate({ id: a.id, isPinned: false })}
               />
@@ -80,7 +83,7 @@ export default function Announcements() {
           <div className="space-y-3">
             {regular.map(a => (
               <AnnouncementCard
-                key={a.id} a={a} isEmployee={isEmployee}
+                key={a.id} a={a} canPublish={canPublish}
                 onRemove={() => remove.mutate(a.id)}
                 onPin={() => pin.mutate({ id: a.id, isPinned: true })}
               />
@@ -90,7 +93,7 @@ export default function Announcements() {
       </div>
 
       {/* New Announcement Modal */}
-      {showForm && !isEmployee && (
+      {showForm && canPublish && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
             <div className="flex items-center justify-between mb-4">
@@ -145,7 +148,7 @@ export default function Announcements() {
   );
 }
 
-function AnnouncementCard({ a, isEmployee, onRemove, onPin }: { a: Announcement; isEmployee: boolean; onRemove: () => void; onPin: () => void }) {
+function AnnouncementCard({ a, canPublish, onRemove, onPin }: { a: Announcement; canPublish: boolean; onRemove: () => void; onPin: () => void }) {
   const LIME = "hsl(82 80% 48%)";
   const typeStyle: Record<string, string> = {
     info: "bg-blue-100 text-blue-700",
@@ -169,7 +172,7 @@ function AnnouncementCard({ a, isEmployee, onRemove, onPin }: { a: Announcement;
             <span>{new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
           </div>
         </div>
-        {!isEmployee && (
+        {canPublish && (
           <div className="flex gap-1">
             <button onClick={onPin} className={`flex size-8 items-center justify-center rounded-lg transition-colors ${a.isPinned ? "text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`} style={a.isPinned ? { background: LIME } : {}}>
               <Pin className="h-3.5 w-3.5" />

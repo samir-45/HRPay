@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { usePermissions } from "@/components/permissions-context";
 import { SkeletonTableRows } from "@/components/skeletons";
 import {
   Receipt, Plus, CheckCircle, XCircle, Clock, DollarSign,
@@ -45,7 +46,9 @@ interface Employee { id: number; firstName: string; lastName: string; }
 
 export default function Expenses() {
   const { token, user } = useAuth();
+  const { hasPower } = usePermissions();
   const isEmployee = user?.role === "employee";
+  const canApproveExpenses = hasPower("approve_expenses");
   const myEmployeeId = user?.employeeId;
 
   const qc = useQueryClient();
@@ -144,23 +147,23 @@ export default function Expenses() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              {(!isEmployee ? ["Employee", "Title", "Category", "Amount", "Date", "Status", "Actions"] : ["Title", "Category", "Amount", "Date", "Status"]).map(h => (
+              {(canApproveExpenses ? ["Employee", "Title", "Category", "Amount", "Date", "Status", "Actions"] : ["Title", "Category", "Amount", "Date", "Status"]).map(h => (
                 <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {expenses.isLoading ? (
-              <SkeletonTableRows rows={6} cols={isEmployee ? 5 : 7} />
+              <SkeletonTableRows rows={6} cols={canApproveExpenses ? 7 : 5} />
             ) : list.length === 0 ? (
-              <tr><td colSpan={isEmployee ? 5 : 7} className="py-12 text-center text-muted-foreground text-sm">
+              <tr><td colSpan={canApproveExpenses ? 7 : 5} className="py-12 text-center text-muted-foreground text-sm">
                 {isEmployee ? "You have no expense claims yet." : "No expense claims found"}
               </td></tr>
             ) : list.map(expense => {
               const sc = STATUS_COLORS[expense.status] ?? STATUS_COLORS.pending;
               return (
                 <tr key={expense.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                  {!isEmployee && <td className="py-3 px-4 font-medium">{expense.firstName} {expense.lastName}</td>}
+                  {canApproveExpenses && <td className="py-3 px-4 font-medium">{expense.firstName} {expense.lastName}</td>}
                   <td className="py-3 px-4">{expense.title}</td>
                   <td className="py-3 px-4"><span className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{expense.category.replace("_", " ")}</span></td>
                   <td className="py-3 px-4 font-semibold">{fmt(Number(expense.amount))}</td>
@@ -168,7 +171,7 @@ export default function Expenses() {
                   <td className="py-3 px-4">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${sc.bg} ${sc.text}`}>{expense.status}</span>
                   </td>
-                  {!isEmployee && (
+                  {canApproveExpenses && (
                     <td className="py-3 px-4">
                       <div className="flex gap-1.5">
                         {expense.status === "pending" && (
@@ -251,7 +254,7 @@ export default function Expenses() {
       )}
 
       {/* Reject Modal */}
-      {selected && !isEmployee && (
+      {selected && canApproveExpenses && (
         <RejectModal
           expense={selected}
           onClose={() => setSelected(null)}
