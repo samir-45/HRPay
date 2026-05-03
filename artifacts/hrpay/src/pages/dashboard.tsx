@@ -101,11 +101,11 @@ function AdminDashboard() {
   const leaveSummary = useGetLeaveSummary();
   const events = useGetUpcomingEvents();
 
-  const s = summary.data;
-  const hc = headcount.data ?? [];
-  const tr = trends.data ?? [];
-  const growthData = growthTrends.data ?? [];
-  const ls = leaveSummary.data ?? [];
+  const s = summary.isError ? null : summary.data;
+  const hc = headcount.isError ? [] : (headcount.data ?? []);
+  const tr = trends.isError ? [] : (trends.data ?? []);
+  const growthData = growthTrends.isError ? [] : (growthTrends.data ?? []);
+  const ls = leaveSummary.isError ? [] : (leaveSummary.data ?? []);
 
   const empSpark = [18, 18, 19, 19, 19, 20, 20];
   const paySpark = tr.slice(-7).map((t) => t.totalGross / 1000);
