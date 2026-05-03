@@ -47,6 +47,8 @@ router.get("/time/entries", async (req, res) => {
       ? user.employeeId
       : q.employeeId ? Number(q.employeeId) : undefined;
 
+  console.log(`[time/entries] user=${user.email} role=${user.role} employeeId=${user.employeeId} companyId=${cid} effectiveEmployeeId=${effectiveEmployeeId} startDate=${q.startDate} endDate=${q.endDate}`);
+
   const conditions = [];
   if (effectiveEmployeeId) conditions.push(eq(timeEntriesTable.employeeId, effectiveEmployeeId));
   if (q.status) conditions.push(eq(timeEntriesTable.status, q.status));
