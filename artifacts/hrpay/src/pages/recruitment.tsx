@@ -120,6 +120,9 @@ export default function Recruitment() {
                       <span className="text-xs text-muted-foreground">{appsByStage(stage.id).length}</span>
                     </div>
                     <div className="space-y-1.5">
+                      {appsByStage(stage.id).length === 0 && (
+                        <p className="text-[11px] text-muted-foreground/60 text-center py-3 italic">No applicants</p>
+                      )}
                       {appsByStage(stage.id).map(app => (
                         <div key={app.id} className="rounded-lg bg-white border border-border p-2.5 shadow-sm">
                           <p className="text-xs font-semibold text-foreground truncate">{app.candidateName}</p>

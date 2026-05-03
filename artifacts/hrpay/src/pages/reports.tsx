@@ -60,7 +60,39 @@ export default function Reports() {
           <h2 className="text-xl font-bold text-foreground">Reports & Analytics</h2>
           <p className="text-sm text-muted-foreground">Pre-built reports across all HR modules</p>
         </div>
-        <button className="flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors">
+        <button
+          onClick={() => {
+            const rows: string[][] = [];
+            const addSection = (title: string, headers: string[], data: string[][]) => {
+              rows.push([title], headers, ...data, []);
+            };
+            if (hc) {
+              addSection("HEADCOUNT", ["Name", "Position", "Department", "Type", "Status", "Start Date", "Salary"],
+                hc.employees.map(e => [
+                  `${e.firstName} ${e.lastName}`, e.position, e.departmentName ?? "", e.employmentType, e.status,
+                  new Date(e.startDate).toLocaleDateString(), e.salary ? String(Number(e.salary)) : "",
+                ]));
+            }
+            if (pr) {
+              addSection("PAYROLL RUNS", ["Period Start", "Period End", "Gross", "Net", "Tax", "Status"],
+                pr.runs.map(r => [r.periodStart, r.periodEnd, r.totalGross ?? "", r.totalNet ?? "", r.totalTax ?? "", r.status]));
+            }
+            if (lv) {
+              addSection("LEAVE REQUESTS", ["Employee", "Department", "Type", "Start Date", "Days", "Status"],
+                lv.requests.map(r => [`${r.firstName ?? ""} ${r.lastName ?? ""}`.trim(), r.departmentName ?? "", r.type, r.startDate, String(r.days ?? ""), r.status]));
+            }
+            if (at) {
+              addSection("ATTENDANCE", ["Employee", "Date", "Hours", "Type", "Status"],
+                at.entries.map(e => [`${e.firstName ?? ""} ${e.lastName ?? ""}`.trim(), e.date, e.hoursWorked ?? "", e.type ?? "", e.status]));
+            }
+            const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+            a.download = `hrpay-report-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+          }}
+          className="flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+        >
           <Download className="h-4 w-4" /> Export All
         </button>
       </div>

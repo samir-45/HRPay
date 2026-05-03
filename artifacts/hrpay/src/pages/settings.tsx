@@ -42,6 +42,78 @@ function SelectField({ label, value, onChange, options }: { label: string; value
   );
 }
 
+function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`w-10 h-6 rounded-full transition-colors focus:outline-none`}
+      style={{ background: enabled ? LIME : "hsl(220 15% 85%)" }}
+      aria-checked={enabled}
+      role="switch"
+    >
+      <span
+        className={`block w-4 h-4 rounded-full bg-white shadow-sm transition-transform mx-1`}
+        style={{ transform: enabled ? "translateX(16px)" : "translateX(0)" }}
+      />
+    </button>
+  );
+}
+
+function SecurityTab() {
+  const ITEMS = [
+    { label: "Require MFA for HR Admins", desc: "All admin accounts must enable two-factor authentication", defaultEnabled: false },
+    { label: "Session Timeout", desc: "Automatically log out inactive users after 30 minutes", defaultEnabled: true },
+    { label: "Login Attempt Lockout", desc: "Lock accounts after 5 consecutive failed login attempts", defaultEnabled: true },
+    { label: "Audit All Actions", desc: "Log every create, update, and delete action with user context", defaultEnabled: true },
+  ];
+  const [enabled, setEnabled] = useState<boolean[]>(ITEMS.map(i => i.defaultEnabled));
+  const toggle = (idx: number) => setEnabled(prev => prev.map((v, i) => i === idx ? !v : v));
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-foreground mb-4">Security Settings</h3>
+      <div className="space-y-3">
+        {ITEMS.map((item, idx) => (
+          <div key={item.label} className="flex items-center justify-between rounded-xl border border-border p-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">{item.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+            </div>
+            <Toggle enabled={enabled[idx]} onToggle={() => toggle(idx)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NotificationsTab() {
+  const ITEMS = [
+    { label: "Leave request approved/rejected", defaultEnabled: true },
+    { label: "New payslip published", defaultEnabled: true },
+    { label: "Onboarding task assigned", defaultEnabled: true },
+    { label: "Performance review due", defaultEnabled: true },
+    { label: "New job application received", defaultEnabled: false },
+    { label: "Birthday & work anniversary greetings", defaultEnabled: true },
+    { label: "Policy document updates", defaultEnabled: false },
+  ];
+  const [enabled, setEnabled] = useState<boolean[]>(ITEMS.map(i => i.defaultEnabled));
+  const toggle = (idx: number) => setEnabled(prev => prev.map((v, i) => i === idx ? !v : v));
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-foreground mb-4">Notification Preferences</h3>
+      <div className="space-y-3">
+        {ITEMS.map((item, idx) => (
+          <div key={item.label} className="flex items-center justify-between rounded-xl border border-border p-4">
+            <p className="text-sm text-foreground">{item.label}</p>
+            <Toggle enabled={enabled[idx]} onToggle={() => toggle(idx)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { token, user } = useAuth();
   const qc = useQueryClient();
@@ -129,45 +201,9 @@ export default function Settings() {
               </div>
             </div>
           ) : tab === "security" ? (
-            <div className="space-y-4">
-              <h3 className="font-bold text-foreground mb-4">Security Settings</h3>
-              <div className="space-y-3">
-                {[
-                  { label: "Require MFA for HR Admins", desc: "All admin accounts must enable two-factor authentication", enabled: false },
-                  { label: "Session Timeout", desc: "Automatically log out inactive users after 30 minutes", enabled: true },
-                  { label: "Login Attempt Lockout", desc: "Lock accounts after 5 consecutive failed login attempts", enabled: true },
-                  { label: "Audit All Actions", desc: "Log every create, update, and delete action with user context", enabled: true },
-                ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between rounded-xl border border-border p-4">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{item.label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-                    </div>
-                    <div className={`w-10 h-6 rounded-full transition-colors cursor-pointer ${item.enabled ? "bg-foreground" : "bg-muted"}`} style={item.enabled ? { background: LIME } : {}} />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SecurityTab />
           ) : (
-            <div className="space-y-4">
-              <h3 className="font-bold text-foreground mb-4">Notification Preferences</h3>
-              <div className="space-y-3">
-                {[
-                  { label: "Leave request approved/rejected", enabled: true },
-                  { label: "New payslip published", enabled: true },
-                  { label: "Onboarding task assigned", enabled: true },
-                  { label: "Performance review due", enabled: true },
-                  { label: "New job application received", enabled: false },
-                  { label: "Birthday & work anniversary greetings", enabled: true },
-                  { label: "Policy document updates", enabled: false },
-                ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between rounded-xl border border-border p-4">
-                    <p className="text-sm text-foreground">{item.label}</p>
-                    <div className={`w-10 h-6 rounded-full transition-colors cursor-pointer`} style={{ background: item.enabled ? LIME : "hsl(220 15% 85%)" }} />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <NotificationsTab />
           )}
         </div>
       </div>
