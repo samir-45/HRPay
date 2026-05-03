@@ -81,6 +81,11 @@ router.get("/time/entries", async (req, res) => {
 
   console.log(`[time/entries] Query returned ${entries.length} entries`);
 
+  // Prevent caching so fresh data is always fetched
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  
   res.json(
     entries.map((e) => ({
       ...e,
