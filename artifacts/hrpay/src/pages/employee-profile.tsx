@@ -1,5 +1,6 @@
 import React from "react";
 import { useParams, Link } from "wouter";
+import { SkeletonEmployeeProfile } from "@/components/skeletons";
 import {
   useGetEmployee,
   useListPayStubs,
@@ -46,7 +47,7 @@ export default function EmployeeProfile() {
   const { data: enrollments } = useListBenefitEnrollments({ employeeId: empId }, { query: { queryKey: getListBenefitEnrollmentsQueryKey({ employeeId: empId }) } });
   const { data: timeEntries } = useListTimeEntries({ employeeId: empId, limit: 10 }, { query: { queryKey: getListTimeEntriesQueryKey({ employeeId: empId, limit: 10 }) } });
 
-  if (isLoading) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Loading employee...</div>;
+  if (isLoading) return <SkeletonEmployeeProfile />;
   if (!emp) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Employee not found.</div>;
 
   const fullName = `${emp.firstName} ${emp.lastName}`;

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useListEmployees, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { SkeletonCourseCards, SkeletonTableRows } from "@/components/skeletons";
 import { GraduationCap, Plus, X, BookOpen, Clock, Users, CheckCircle, PlayCircle } from "lucide-react";
 
 const API = "/api";
@@ -124,7 +125,7 @@ export default function Training() {
 
       {/* Course Library */}
       {tab === "courses" && (
-        courses.isLoading ? <div className="text-center py-12 text-muted-foreground text-sm">Loading…</div> :
+        courses.isLoading ? <SkeletonCourseCards count={6} /> :
         (courses.data ?? []).length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center">
             <GraduationCap className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
@@ -180,7 +181,7 @@ export default function Training() {
             </thead>
             <tbody>
               {enrollments.isLoading ? (
-                <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">Loading…</td></tr>
+                <SkeletonTableRows rows={5} cols={7} />
               ) : (enrollments.data ?? []).length === 0 ? (
                 <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">No enrollments yet</td></tr>
               ) : (enrollments.data ?? []).map(enrollment => {

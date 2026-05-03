@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { SkeletonOnboardingGroups } from "@/components/skeletons";
 import {
   useListOnboardingTasks,
   useCompleteOnboardingTask,
@@ -70,7 +71,7 @@ export default function Onboarding() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Loading tasks...</div>
+        <SkeletonOnboardingGroups count={3} />
       ) : Object.keys(grouped).length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-white rounded-xl border border-border">
           <p className="text-sm">No onboarding tasks yet.</p>

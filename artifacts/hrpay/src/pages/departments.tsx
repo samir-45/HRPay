@@ -82,7 +82,21 @@ export default function Departments() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Loading departments...</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-border p-5 space-y-4 animate-pulse">
+              <div className="flex items-start justify-between">
+                <div className="size-10 rounded-lg bg-muted" />
+                <div className="flex gap-1"><div className="size-7 rounded-lg bg-muted" /><div className="size-7 rounded-lg bg-muted" /></div>
+              </div>
+              <div className="space-y-2"><div className="h-4 w-32 rounded-md bg-muted" /><div className="h-3 w-48 rounded-md bg-muted" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-muted/60 p-3 space-y-2"><div className="h-2.5 w-16 rounded bg-muted" /><div className="h-5 w-8 rounded bg-muted" /></div>
+                <div className="rounded-lg bg-muted/60 p-3 space-y-2"><div className="h-2.5 w-16 rounded bg-muted" /><div className="h-4 w-20 rounded bg-muted" /></div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {deptList.map((d) => (

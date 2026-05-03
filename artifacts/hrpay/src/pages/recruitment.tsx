@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { SkeletonJobCards } from "@/components/skeletons";
 import { Briefcase, Plus, X, ChevronRight, MapPin, DollarSign, Clock, Users } from "lucide-react";
 
 const API = "/api";
@@ -55,7 +56,7 @@ export default function Recruitment() {
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Job Postings</h3>
           {jobs.isLoading ? (
-            <div className="text-sm text-muted-foreground p-4">Loading…</div>
+            <SkeletonJobCards count={4} />
           ) : (jobs.data ?? []).length === 0 ? (
             <div className="rounded-2xl border border-border bg-white p-6 text-center text-sm text-muted-foreground">No job postings yet. Create one to get started.</div>
           ) : (

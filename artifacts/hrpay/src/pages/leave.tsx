@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { SkeletonTableRows } from "@/components/skeletons";
 import {
   useListLeaveRequests,
   useApproveLeaveRequest,
@@ -107,7 +108,14 @@ export default function Leave() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Loading...</div>
+        <div className="bg-white rounded-xl border border-border overflow-hidden">
+          <table className="w-full text-sm min-w-[560px]">
+            <thead className="border-b border-border bg-muted/30">
+              <tr>{["Employee","Type","Start","End","Days","Status","Actions"].map(h => <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground">{h}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-border"><SkeletonTableRows rows={6} cols={7} /></tbody>
+          </table>
+        </div>
       ) : reqList.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-white rounded-xl border border-border">
           <p className="text-sm">No leave requests found.</p>

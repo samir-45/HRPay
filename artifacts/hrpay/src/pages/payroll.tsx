@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
+import { SkeletonTableRows } from "@/components/skeletons";
 import {
   useListPayrollRuns,
   useCreatePayrollRun,
@@ -54,7 +55,30 @@ export default function Payroll() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Loading payroll runs...</div>
+        <div className="space-y-6">
+          <div>
+            <div className="h-3.5 w-24 rounded-md bg-muted animate-pulse mb-3" />
+            <div className="bg-white rounded-xl border border-border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-muted/30">
+                  <tr>{["Run Name","Period","Pay Date","Status","Action"].map(h => <th key={h} className="text-left px-5 py-3 font-medium text-muted-foreground">{h}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-border"><SkeletonTableRows rows={3} cols={5} /></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div className="h-3.5 w-32 rounded-md bg-muted animate-pulse mb-3" />
+            <div className="bg-white rounded-xl border border-border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-muted/30">
+                  <tr>{["Run Name","Period","Pay Date","Gross","Net","Employees","Action"].map(h => <th key={h} className="text-left px-5 py-3 font-medium text-muted-foreground">{h}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-border"><SkeletonTableRows rows={4} cols={7} /></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="space-y-6">
           {draft.length > 0 && (

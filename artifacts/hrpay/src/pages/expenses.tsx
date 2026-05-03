@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { SkeletonTableRows } from "@/components/skeletons";
 import {
   Receipt, Plus, CheckCircle, XCircle, Clock, DollarSign,
   ChevronDown, X, Filter, TrendingUp,
@@ -128,7 +129,7 @@ export default function Expenses() {
           </thead>
           <tbody>
             {expenses.isLoading ? (
-              <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">Loading…</td></tr>
+              <SkeletonTableRows rows={6} cols={7} />
             ) : list.length === 0 ? (
               <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">No expense claims found</td></tr>
             ) : list.map(expense => {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { SkeletonSettingsForm } from "@/components/skeletons";
 import { Settings as SettingsIcon, Building2, CreditCard, Globe, Shield, Bell, Save } from "lucide-react";
 
 const API = "/api";
@@ -157,7 +158,7 @@ export default function Settings() {
         {/* Content */}
         <div className="flex-1 rounded-2xl border border-border bg-white p-6 shadow-sm">
           {settings.isLoading ? (
-            <div className="text-sm text-muted-foreground">Loading…</div>
+            <SkeletonSettingsForm />
           ) : tab === "company" ? (
             <div className="space-y-4">
               <h3 className="font-bold text-foreground mb-4">Company Profile</h3>

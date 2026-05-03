@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { SkeletonAnnouncementCards } from "@/components/skeletons";
 import { Megaphone, Plus, X, Pin, Trash2 } from "lucide-react";
 
 const API = "/api";
@@ -68,7 +69,7 @@ export default function Announcements() {
       <div>
         {pinned.length > 0 && <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recent</p>}
         {announcements.isLoading ? (
-          <div className="text-sm text-muted-foreground p-4">Loading…</div>
+          <SkeletonAnnouncementCards count={4} />
         ) : (announcements.data ?? []).length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-white/50 p-10 text-center">
             <Megaphone className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />

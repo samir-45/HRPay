@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
+import { SkeletonEmployeeTableRows } from "@/components/skeletons";
 import { useListEmployees, useListDepartments, useDeleteEmployee, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, LayoutGrid, List, Trash2, Eye } from "lucide-react";
@@ -95,7 +96,20 @@ export default function Employees() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Loading employees...</div>
+        <div className="bg-white rounded-xl border border-border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border bg-muted/30">
+              <tr>
+                {["Employee","Department","Type","Status","Start Date","Actions"].map(h => (
+                  <th key={h} className="text-left px-5 py-3 font-medium text-muted-foreground">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              <SkeletonEmployeeTableRows rows={7} />
+            </tbody>
+          </table>
+        </div>
       ) : employees.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <p className="text-sm">No employees found.</p>

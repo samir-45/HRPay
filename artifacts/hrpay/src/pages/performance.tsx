@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { SkeletonGoalCards } from "@/components/skeletons";
 import { Target, Plus, X, Star, TrendingUp, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 
 const API = "/api";
@@ -91,7 +92,7 @@ export default function Performance() {
       {tab === "goals" && (
         <div className="space-y-3">
           {goals.isLoading ? (
-            <div className="text-sm text-muted-foreground p-4">Loading…</div>
+            <SkeletonGoalCards count={4} />
           ) : (goals.data ?? []).length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-white/50 p-10 text-center">
               <Target className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
@@ -146,7 +147,7 @@ export default function Performance() {
       {tab === "reviews" && (
         <div className="space-y-3">
           {reviews.isLoading ? (
-            <div className="text-sm text-muted-foreground p-4">Loading…</div>
+            <SkeletonGoalCards count={3} />
           ) : (reviews.data ?? []).length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-white/50 p-10 text-center">
               <Star className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />

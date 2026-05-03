@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useParams, Link } from "wouter";
+import { SkeletonPayrollDetail } from "@/components/skeletons";
 import {
   useGetPayrollRun,
   useListPayStubs,
@@ -44,7 +45,7 @@ export default function PayrollDetail() {
     },
   });
 
-  if (isLoading) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Loading...</div>;
+  if (isLoading) return <SkeletonPayrollDetail />;
   if (!run) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Payroll run not found.</div>;
 
   const stubList = stubs ?? [];

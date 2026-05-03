@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useListEmployees, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { SkeletonCards } from "@/components/skeletons";
 import { Monitor, Plus, Package, X, Pencil, Laptop, Smartphone, Wifi, Car, Armchair } from "lucide-react";
 
 const API = "/api";
@@ -129,7 +130,7 @@ export default function Assets() {
 
       {/* Asset Grid */}
       {assets.isLoading ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">Loading assets…</div>
+        <SkeletonCards count={6} cols={3} />
       ) : list.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center">
           <Package className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
