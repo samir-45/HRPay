@@ -8,6 +8,8 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, X, Pencil, Trash2, Building2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { toast } from "@/components/ui/sonner";
 
 function fmt(n: number | null | undefined) {
   if (n == null) return "—";
@@ -19,38 +21,63 @@ export default function Departments() {
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: "", description: "", budget: "" });
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const { data: depts, isLoading } = useListDepartments({ query: { queryKey: getListDepartmentsQueryKey() } });
-  const createMut = useCreateDepartment({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListDepartmentsQueryKey() }); closeModal(); } } });
-  const updateMut = useUpdateDepartment({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListDepartmentsQueryKey() }); closeModal(); } } });
-  const deleteMut = useDeleteDepartment({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListDepartmentsQueryKey() }) } });
+  const createMut = useCreateDepartment({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
+        closeModal();
+        toast.success("Department created", { description: `"${form.name}" has been added.` });
+      },
+      onError: () => toast.error("Failed to create department"),
+    },
+  });
+  const updateMut = useUpdateDepartment({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
+        closeModal();
+        toast.success("Department updated");
+      },
+      onError: () => toast.error("Failed to update department"),
+    },
+  });
+  const deleteMut = useDeleteDepartment({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
+        toast.success("Department deleted", { description: `"${deleteTarget?.name}" has been removed.` });
+      },
+      onError: () => toast.error("Failed to delete department"),
+    },
+  });
 
   const closeModal = () => { setShowModal(false); setEditId(null); setForm({ name: "", description: "", budget: "" }); };
   const openEdit = (d: any) => { setForm({ name: d.name, description: d.description ?? "", budget: d.budget ? String(d.budget) : "" }); setEditId(d.id); setShowModal(true); };
 
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const deptList = depts ?? [];
+  const inputCls = "w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const data = { ...form, budget: form.budget || undefined } as any;
-    if (editId) updateMut.mutate({ id: editId, ...data });
-    else createMut.mutate(data);
+    const payload = { name: form.name, description: form.description, budget: form.budget ? Number(form.budget) : undefined };
+    if (editId) updateMut.mutate({ id: editId, ...payload } as any);
+    else createMut.mutate(payload as any);
   };
 
-  const deptList = depts ?? [];
-  const totalHeadcount = deptList.reduce((a, d) => a + (d.headCount ?? 0), 0);
-  const totalBudget = deptList.reduce((a, d) => a + (d.budget ?? 0), 0);
-  const inputCls = "w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20";
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Departments</h2>
-          <p className="text-sm text-muted-foreground">{deptList.length} departments · {totalHeadcount} total employees · {fmt(totalBudget)} total budget</p>
+          <p className="text-sm text-muted-foreground">{deptList.length} departments</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
-          <Plus className="h-4 w-4" /> Add Department
+        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 shrink-0">
+          <Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Department</span>
         </button>
       </div>
 
@@ -66,7 +93,12 @@ export default function Departments() {
                 </div>
                 <div className="flex gap-1">
                   <button onClick={() => openEdit(d)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50"><Pencil className="h-3.5 w-3.5" /></button>
-                  <button onClick={() => { if (confirm("Delete this department?")) deleteMut.mutate({ id: d.id }); }} className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button
+                    onClick={() => setDeleteTarget({ id: d.id, name: d.name })}
+                    className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
               <div>
@@ -109,6 +141,15 @@ export default function Departments() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete department?"
+        description={`"${deleteTarget?.name}" and all its configuration will be permanently removed. Employees in this department will become unassigned.`}
+        confirmLabel="Delete Department"
+        onConfirm={() => { if (deleteTarget) deleteMut.mutate({ id: deleteTarget.id }); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

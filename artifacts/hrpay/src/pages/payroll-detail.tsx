@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetPayrollRun,
@@ -9,6 +9,8 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Play } from "lucide-react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { toast } from "@/components/ui/sonner";
 
 function fmt(n: number | null | undefined) {
   if (n == null) return "—";
@@ -26,6 +28,7 @@ export default function PayrollDetail() {
   const { id } = useParams<{ id: string }>();
   const runId = Number(id);
   const qc = useQueryClient();
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const { data: run, isLoading } = useGetPayrollRun(runId, { query: { queryKey: getGetPayrollRunQueryKey(runId) } });
   const { data: stubs } = useListPayStubs({ payrollRunId: runId }, { query: { queryKey: getListPayStubsQueryKey({ payrollRunId: runId }) } });
@@ -35,7 +38,9 @@ export default function PayrollDetail() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getGetPayrollRunQueryKey(runId) });
         qc.invalidateQueries({ queryKey: getListPayStubsQueryKey({ payrollRunId: runId }) });
+        toast.success("Payroll processed", { description: "Pay stubs have been generated for all active employees." });
       },
+      onError: () => toast.error("Failed to process payroll", { description: "Please check the payroll run and try again." }),
     },
   });
 
@@ -59,7 +64,7 @@ export default function PayrollDetail() {
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_STYLES[run.status]}`}>{run.status}</span>
         {run.status === "draft" && (
           <button
-            onClick={() => { if (confirm("Process this payroll run? This will calculate pay for all active employees.")) processMut.mutate({ id: runId }); }}
+            onClick={() => setShowConfirm(true)}
             disabled={processMut.isPending}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
           >
@@ -111,38 +116,50 @@ export default function PayrollDetail() {
             {run.status === "draft" ? "Process this run to generate pay stubs." : "No pay stubs found."}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/30">
-              <tr>
-                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Hours</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Gross</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Federal</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">State</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">FICA</th>
-                <th className="text-right px-5 py-3 font-medium text-muted-foreground">Net Pay</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {stubList.map((s) => (
-                <tr key={s.id} className="hover:bg-muted/20">
-                  <td className="px-5 py-3">
-                    <Link href={`/employees/${s.employeeId}`} className="font-medium text-foreground hover:text-primary">
-                      {s.employeeName}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{s.hoursWorked ?? "—"}</td>
-                  <td className="px-4 py-3 text-right font-medium">{fmt(s.grossPay)}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{fmt(s.federalTax)}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{fmt(s.stateTax)}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{fmt((s.socialSecurity ?? 0) + (s.medicare ?? 0))}</td>
-                  <td className="px-5 py-3 text-right font-semibold text-emerald-700">{fmt(s.netPay)}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead className="border-b border-border bg-muted/30">
+                <tr>
+                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Employee</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Hours</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Gross</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Federal</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">State</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">FICA</th>
+                  <th className="text-right px-5 py-3 font-medium text-muted-foreground">Net Pay</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {stubList.map((s) => (
+                  <tr key={s.id} className="hover:bg-muted/20">
+                    <td className="px-5 py-3">
+                      <Link href={`/employees/${s.employeeId}`} className="font-medium text-foreground hover:text-primary">
+                        {s.employeeName}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{s.hoursWorked ?? "—"}</td>
+                    <td className="px-4 py-3 text-right font-medium">{fmt(s.grossPay)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{fmt(s.federalTax)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{fmt(s.stateTax)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{fmt((s.socialSecurity ?? 0) + (s.medicare ?? 0))}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-emerald-700">{fmt(s.netPay)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={showConfirm}
+        title="Process this payroll run?"
+        description={`This will calculate and finalize pay for all active employees in the "${run.name}" run. Pay stubs will be generated and the run status will change to completed.`}
+        confirmLabel="Process Payroll"
+        dangerous={false}
+        onConfirm={() => processMut.mutate({ id: runId })}
+        onCancel={() => setShowConfirm(false)}
+      />
     </div>
   );
 }

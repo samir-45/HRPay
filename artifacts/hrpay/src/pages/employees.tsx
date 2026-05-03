@@ -3,6 +3,8 @@ import { Link } from "wouter";
 import { useListEmployees, useListDepartments, useDeleteEmployee, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, LayoutGrid, List, Trash2, Eye } from "lucide-react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { toast } from "@/components/ui/sonner";
 
 const STATUS_STYLES: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700",
@@ -33,12 +35,21 @@ export default function Employees() {
   const [dept, setDept] = useState("");
   const [status, setStatus] = useState("");
   const [view, setView] = useState<"table" | "grid">("table");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const qc = useQueryClient();
 
   const params = { page: 1, limit: 100, ...(search && { search }), ...(dept && { department: dept }), ...(status && { status }) };
   const { data, isLoading } = useListEmployees(params, { query: { queryKey: getListEmployeesQueryKey(params) } });
   const { data: depts } = useListDepartments();
-  const deleteMut = useDeleteEmployee({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListEmployeesQueryKey({}) }) } });
+  const deleteMut = useDeleteEmployee({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListEmployeesQueryKey({}) });
+        toast.success("Employee removed", { description: `${deleteTarget?.name ?? "Employee"} has been deleted.` });
+      },
+      onError: () => toast.error("Failed to delete employee", { description: "Please try again." }),
+    },
+  });
 
   const employees = data?.employees ?? [];
 
@@ -130,7 +141,7 @@ export default function Employees() {
                         <Eye className="h-4 w-4" />
                       </Link>
                       <button
-                        onClick={() => { if (confirm("Delete this employee?")) deleteMut.mutate({ id: emp.id }); }}
+                        onClick={() => setDeleteTarget({ id: emp.id, name: `${emp.firstName} ${emp.lastName}` })}
                         className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -163,6 +174,15 @@ export default function Employees() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete employee?"
+        description={`${deleteTarget?.name ?? "This employee"} will be permanently removed from the system. This action cannot be undone.`}
+        confirmLabel="Delete Employee"
+        onConfirm={() => { if (deleteTarget) deleteMut.mutate({ id: deleteTarget.id }); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
