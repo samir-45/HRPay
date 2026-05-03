@@ -42,10 +42,22 @@ export default function EmployeeNew() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createMut.mutate({
-      ...form,
-      departmentId: form.departmentId ? Number(form.departmentId) : undefined,
-      salary: form.salary || undefined,
-    } as any);
+      data: {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone || undefined,
+        position: form.position,
+        departmentId: form.departmentId ? Number(form.departmentId) : undefined,
+        employmentType: form.employmentType as "full_time" | "part_time" | "contractor" | "intern",
+        startDate: form.startDate,
+        salary: form.salary ? Number(form.salary) : undefined,
+        salaryType: form.salaryType as "annual" | "hourly" | undefined,
+        city: form.city || undefined,
+        state: form.state || undefined,
+        country: form.country || undefined,
+      },
+    });
   };
 
   const inputCls = "w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20";

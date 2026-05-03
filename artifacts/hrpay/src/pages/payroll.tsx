@@ -33,7 +33,7 @@ export default function Payroll() {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    createMut.mutate(form as any, { onSuccess: () => { setShowModal(false); setForm({ name: "", periodStart: "", periodEnd: "", payDate: "", notes: "" }); } });
+    createMut.mutate({ data: { name: form.name, periodStart: form.periodStart, periodEnd: form.periodEnd, payDate: form.payDate, notes: form.notes || undefined } }, { onSuccess: () => { setShowModal(false); setForm({ name: "", periodStart: "", periodEnd: "", payDate: "", notes: "" }); } });
   };
 
   const allRuns = runs ?? [];

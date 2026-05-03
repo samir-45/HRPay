@@ -63,8 +63,8 @@ export default function Departments() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const payload = { name: form.name, description: form.description, budget: form.budget ? Number(form.budget) : undefined };
-    if (editId) updateMut.mutate({ id: editId, ...payload } as any);
-    else createMut.mutate(payload as any);
+    if (editId) updateMut.mutate({ id: editId, data: payload });
+    else createMut.mutate({ data: payload });
   };
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }));

@@ -23,7 +23,7 @@ export default function Time() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ employeeId: "", date: new Date().toISOString().split("T")[0], clockIn: "", clockOut: "", hoursWorked: "", notes: "" });
 
-  const params = { limit: 100, ...(status && { status }) };
+  const params = { limit: 100, ...(status && { status: status as "pending" | "approved" | "rejected" }) };
   const { data: entries, isLoading } = useListTimeEntries(params, { query: { queryKey: getListTimeEntriesQueryKey(params) } });
   const { data: empData } = useListEmployees({ page: 1, limit: 100 }, { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }) } });
 
@@ -135,7 +135,7 @@ export default function Time() {
               <h3 className="font-semibold text-lg">Log Time Entry</h3>
               <button onClick={() => setShowModal(false)} className="p-1.5 rounded text-muted-foreground hover:bg-muted/50"><X className="h-4 w-4" /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); createMut.mutate({ ...form, employeeId: Number(form.employeeId), hoursWorked: form.hoursWorked || undefined } as any); }} className="space-y-4">
+            <form onSubmit={e => { e.preventDefault(); createMut.mutate({ data: { date: form.date, clockIn: form.clockIn, clockOut: form.clockOut || undefined, notes: form.notes || undefined, employeeId: Number(form.employeeId) } }); }} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5">Employee</label>
                 <select required value={form.employeeId} onChange={set("employeeId")} className={inputCls}>

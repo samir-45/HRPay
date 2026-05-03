@@ -35,7 +35,7 @@ export default function Leave() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ employeeId: "", type: "vacation", startDate: "", endDate: "", reason: "" });
 
-  const params = { ...(status && { status }), ...(type && { type }) };
+  const params = { ...(status && { status: status as "pending" | "approved" | "rejected" | "cancelled" }), ...(type && { type: type as "vacation" | "sick" | "personal" | "maternity" | "paternity" | "unpaid" }) };
   const { data: requests, isLoading } = useListLeaveRequests(params, { query: { queryKey: getListLeaveRequestsQueryKey(params) } });
   const { data: empData } = useListEmployees({ page: 1, limit: 100 }, { query: { queryKey: getListEmployeesQueryKey({ page: 1, limit: 100 }) } });
 
@@ -169,7 +169,7 @@ export default function Leave() {
               <h3 className="font-semibold text-lg">New Leave Request</h3>
               <button onClick={() => setShowModal(false)} className="p-1.5 rounded text-muted-foreground hover:bg-muted/50"><X className="h-4 w-4" /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); createMut.mutate({ ...form, employeeId: Number(form.employeeId) } as any); }} className="space-y-4">
+            <form onSubmit={e => { e.preventDefault(); createMut.mutate({ data: { type: form.type as "vacation" | "sick" | "personal" | "maternity" | "paternity" | "unpaid", startDate: form.startDate, endDate: form.endDate, reason: form.reason || undefined, employeeId: Number(form.employeeId) } }); }} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5">Employee</label>
                 <select required value={form.employeeId} onChange={set("employeeId")} className={inputCls}>

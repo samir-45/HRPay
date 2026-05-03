@@ -134,12 +134,12 @@ export default function Onboarding() {
               <h3 className="font-semibold text-lg">Add Onboarding Task</h3>
               <button onClick={() => setShowModal(false)} className="p-1.5 rounded text-muted-foreground hover:bg-muted/50"><X className="h-4 w-4" /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); createMut.mutate({ ...form, employeeId: Number(form.employeeId), dueDate: form.dueDate || undefined } as any); }} className="space-y-4">
+            <form onSubmit={e => { e.preventDefault(); createMut.mutate({ data: { title: form.title, description: form.description || undefined, category: form.category as "documentation" | "it_setup" | "training" | "introduction" | "compliance", priority: form.priority as "high" | "medium" | "low", assignedTo: form.assignedTo || undefined, employeeId: Number(form.employeeId), dueDate: form.dueDate || undefined } }); }} className="space-y-4">
               <div><label className="block text-sm font-medium mb-1.5">Employee</label><select required value={form.employeeId} onChange={set("employeeId")} className={inputCls}><option value="">Select employee</option>{(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></div>
               <div><label className="block text-sm font-medium mb-1.5">Task Title</label><input required value={form.title} onChange={set("title")} className={inputCls} placeholder="Complete I-9 verification" /></div>
               <div><label className="block text-sm font-medium mb-1.5">Description</label><textarea value={form.description} onChange={set("description")} className={`${inputCls} resize-none`} rows={2} /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="block text-sm font-medium mb-1.5">Category</label><select value={form.category} onChange={set("category")} className={inputCls}><option value="documentation">Documentation</option><option value="equipment">Equipment</option><option value="training">Training</option><option value="orientation">Orientation</option><option value="benefits">Benefits</option></select></div>
+                <div><label className="block text-sm font-medium mb-1.5">Category</label><select value={form.category} onChange={set("category")} className={inputCls}><option value="documentation">Documentation</option><option value="it_setup">IT Setup</option><option value="training">Training</option><option value="introduction">Introduction</option><option value="compliance">Compliance</option></select></div>
                 <div><label className="block text-sm font-medium mb-1.5">Priority</label><select value={form.priority} onChange={set("priority")} className={inputCls}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
               </div>
               <div className="grid grid-cols-2 gap-3">

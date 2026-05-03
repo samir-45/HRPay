@@ -142,7 +142,7 @@ export default function Benefits() {
               <h3 className="font-semibold text-lg">Add Benefit Plan</h3>
               <button onClick={() => setShowPlanModal(false)} className="p-1.5 rounded text-muted-foreground hover:bg-muted/50"><X className="h-4 w-4" /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); createPlanMut.mutate({ ...planForm, employeeCost: planForm.employeeCost || undefined, employerCost: planForm.employerCost || undefined } as any); }} className="space-y-4">
+            <form onSubmit={e => { e.preventDefault(); createPlanMut.mutate({ data: { ...planForm, type: planForm.type as "health" | "dental" | "vision" | "life" | "disability" | "retirement" | "other", employeeCost: planForm.employeeCost ? Number(planForm.employeeCost) : undefined, employerCost: planForm.employerCost ? Number(planForm.employerCost) : undefined } }); }} className="space-y-4">
               <div><label className="block text-sm font-medium mb-1.5">Plan Name</label><input required value={planForm.name} onChange={setP("name")} className={inputCls} placeholder="Blue Shield PPO" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="block text-sm font-medium mb-1.5">Type</label><select value={planForm.type} onChange={setP("type")} className={inputCls}><option value="health">Health</option><option value="dental">Dental</option><option value="vision">Vision</option><option value="life">Life</option><option value="disability">Disability</option><option value="retirement">Retirement</option><option value="other">Other</option></select></div>
@@ -169,7 +169,7 @@ export default function Benefits() {
               <h3 className="font-semibold text-lg">Enroll Employee</h3>
               <button onClick={() => setShowEnrollModal(false)} className="p-1.5 rounded text-muted-foreground hover:bg-muted/50"><X className="h-4 w-4" /></button>
             </div>
-            <form onSubmit={e => { e.preventDefault(); createEnrollMut.mutate({ employeeId: Number(enrollForm.employeeId), planId: Number(enrollForm.planId) } as any); }} className="space-y-4">
+            <form onSubmit={e => { e.preventDefault(); createEnrollMut.mutate({ data: { employeeId: Number(enrollForm.employeeId), planId: Number(enrollForm.planId) } }); }} className="space-y-4">
               <div><label className="block text-sm font-medium mb-1.5">Employee</label><select required value={enrollForm.employeeId} onChange={setE("employeeId")} className={inputCls}><option value="">Select employee</option>{(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></div>
               <div><label className="block text-sm font-medium mb-1.5">Benefit Plan</label><select required value={enrollForm.planId} onChange={setE("planId")} className={inputCls}><option value="">Select plan</option>{planList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
               <div className="flex gap-3 pt-2">
