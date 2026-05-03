@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, Link } from "wouter";
 import { SkeletonEmployeeProfile } from "@/components/skeletons";
 import {
@@ -13,7 +13,13 @@ import {
   getListBenefitEnrollmentsQueryKey,
   getListTimeEntriesQueryKey,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, DollarSign } from "lucide-react";
+import { useAuth, apiHeaders } from "@/components/auth-context";
+import {
+  ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, DollarSign,
+  UserPlus, X, Copy, Check, Loader2, CheckCircle, AlertCircle,
+} from "lucide-react";
+
+const LIME = "hsl(82 80% 48%)";
 
 const STATUS_STYLES: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700",
@@ -37,15 +43,61 @@ function Avatar({ name, size = 14 }: { name: string; size?: number }) {
   );
 }
 
+interface InviteResult {
+  email: string;
+  tempPassword: string;
+  acceptUrl: string;
+}
+
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
   const empId = Number(id);
+  const { token } = useAuth();
 
   const { data: emp, isLoading } = useGetEmployee(empId, { query: { queryKey: getGetEmployeeQueryKey(empId) } });
   const { data: stubs } = useListPayStubs({ employeeId: empId }, { query: { queryKey: getListPayStubsQueryKey({ employeeId: empId }) } });
   const { data: balances } = useListLeaveBalances({ employeeId: empId }, { query: { queryKey: getListLeaveBalancesQueryKey({ employeeId: empId }) } });
   const { data: enrollments } = useListBenefitEnrollments({ employeeId: empId }, { query: { queryKey: getListBenefitEnrollmentsQueryKey({ employeeId: empId }) } });
   const { data: timeEntries } = useListTimeEntries({ employeeId: empId }, { query: { queryKey: getListTimeEntriesQueryKey({ employeeId: empId }) } });
+
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [inviteResult, setInviteResult] = useState<InviteResult | null>(null);
+  const [inviteError, setInviteError] = useState("");
+  const [copied, setCopied] = useState("");
+
+  function copyText(text: string, key: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(""), 2000);
+  }
+
+  async function sendLoginInvite() {
+    if (!emp) return;
+    setInviting(true);
+    setInviteError("");
+    try {
+      const r = await fetch("/api/companies/invite", {
+        method: "POST",
+        headers: apiHeaders(token),
+        body: JSON.stringify({
+          email: emp.email,
+          name: `${emp.firstName} ${emp.lastName}`,
+          role: "employee",
+        }),
+      });
+      const data = await r.json() as { tempPassword?: string; acceptUrl?: string; error?: string };
+      if (!r.ok) {
+        setInviteError(data.error ?? "Failed to create invitation");
+        return;
+      }
+      setInviteResult({ email: emp.email, tempPassword: data.tempPassword!, acceptUrl: data.acceptUrl! });
+    } catch {
+      setInviteError("Something went wrong. Please try again.");
+    } finally {
+      setInviting(false);
+    }
+  }
 
   if (isLoading) return <SkeletonEmployeeProfile />;
   if (!emp) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Employee not found.</div>;
@@ -76,6 +128,7 @@ export default function EmployeeProfile() {
               {emp.status.replace("_", " ")}
             </span>
           </div>
+
           <div className="space-y-3 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Mail className="h-4 w-4 shrink-0" />
@@ -107,6 +160,21 @@ export default function EmployeeProfile() {
                 <span>{fmt(Number(emp.salary))} / {emp.salaryType === "hourly" ? "hr" : "yr"}</span>
               </div>
             )}
+          </div>
+
+          {/* Login Invite Button */}
+          <div className="pt-1 border-t border-border">
+            <button
+              onClick={() => { setShowInvite(true); setInviteResult(null); setInviteError(""); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:opacity-90 transition-all"
+              style={{ background: LIME }}
+            >
+              <UserPlus className="h-4 w-4" />
+              Send Login Invite
+            </button>
+            <p className="text-[11px] text-muted-foreground text-center mt-2">
+              Generates login credentials for this employee
+            </p>
           </div>
         </div>
 
@@ -209,6 +277,111 @@ export default function EmployeeProfile() {
           </div>
         </div>
       </div>
+
+      {/* Login Invite Modal */}
+      {showInvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-foreground text-lg">Send Login Invite</h3>
+              <button onClick={() => setShowInvite(false)} className="p-1.5 rounded-xl hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {inviteResult ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">Invitation created!</p>
+                    <p className="text-xs text-emerald-700">Share these credentials with {fullName}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                  <p className="text-xs font-bold text-foreground mb-2">Login Credentials to Share</p>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Email</p>
+                      <p className="text-sm font-mono font-semibold text-foreground">{inviteResult.email}</p>
+                    </div>
+                    <button onClick={() => copyText(inviteResult.email, "email")} className="p-1.5 rounded hover:bg-muted">
+                      {copied === "email" ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Temporary Password</p>
+                      <p className="text-sm font-mono font-semibold text-foreground">{inviteResult.tempPassword}</p>
+                    </div>
+                    <button onClick={() => copyText(inviteResult.tempPassword, "pw")} className="p-1.5 rounded hover:bg-muted">
+                      {copied === "pw" ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Login URL</p>
+                      <p className="text-xs font-mono text-foreground truncate max-w-48">{window.location.origin}/login</p>
+                    </div>
+                    <button onClick={() => copyText(`${window.location.origin}/login`, "url")} className="p-1.5 rounded hover:bg-muted">
+                      {copied === "url" ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  The employee must visit the login URL and use these credentials. They can change their password from Settings after logging in.
+                </p>
+
+                <button onClick={() => setShowInvite(false)}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-foreground hover:opacity-90"
+                  style={{ background: LIME }}>
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={fullName} size={10} />
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">{fullName}</p>
+                      <p className="text-xs text-muted-foreground">{emp.email}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  This will generate a temporary password for <span className="font-semibold text-foreground">{fullName}</span>. Share the credentials with them so they can log in to HRPay.
+                </p>
+
+                {inviteError && (
+                  <div className="flex items-start gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
+                    <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                    <p className="text-sm text-destructive">{inviteError}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => setShowInvite(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:bg-muted">
+                    Cancel
+                  </button>
+                  <button onClick={sendLoginInvite} disabled={inviting}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-foreground disabled:opacity-50 hover:opacity-90"
+                    style={{ background: LIME }}>
+                    {inviting ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : <><UserPlus className="h-4 w-4" /> Send Invite</>}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
