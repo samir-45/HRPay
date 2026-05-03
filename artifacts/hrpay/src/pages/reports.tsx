@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import { FileText, Download, Users, DollarSign, CalendarDays, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
@@ -39,10 +40,27 @@ function Section({ title, subtitle, icon: Icon, children }: { title: string; sub
 }
 
 export default function Reports() {
-  const headcount = useQuery<HeadcountData>({ queryKey: ["report-headcount"], queryFn: () => fetch(`${API}/reports/headcount`).then(r => r.json()) });
-  const payroll = useQuery<PayrollData>({ queryKey: ["report-payroll"], queryFn: () => fetch(`${API}/reports/payroll-summary`).then(r => r.json()) });
-  const leave = useQuery<LeaveData>({ queryKey: ["report-leave"], queryFn: () => fetch(`${API}/reports/leave`).then(r => r.json()) });
-  const attendance = useQuery<AttendanceData>({ queryKey: ["report-attendance"], queryFn: () => fetch(`${API}/reports/attendance`).then(r => r.json()) });
+  const { token } = useAuth();
+  const headcount = useQuery<HeadcountData>({ 
+    queryKey: ["report-headcount"], 
+    queryFn: () => fetch(`${API}/reports/headcount`, { headers: apiHeaders(token) }).then(r => r.json()),
+    retry: 1,
+  });
+  const payroll = useQuery<PayrollData>({ 
+    queryKey: ["report-payroll"], 
+    queryFn: () => fetch(`${API}/reports/payroll-summary`, { headers: apiHeaders(token) }).then(r => r.json()),
+    retry: 1,
+  });
+  const leave = useQuery<LeaveData>({ 
+    queryKey: ["report-leave"], 
+    queryFn: () => fetch(`${API}/reports/leave`, { headers: apiHeaders(token) }).then(r => r.json()),
+    retry: 1,
+  });
+  const attendance = useQuery<AttendanceData>({ 
+    queryKey: ["report-attendance"], 
+    queryFn: () => fetch(`${API}/reports/attendance`, { headers: apiHeaders(token) }).then(r => r.json()),
+    retry: 1,
+  });
 
   const hc = headcount.data;
   const pr = payroll.data;
