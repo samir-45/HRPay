@@ -727,6 +727,9 @@ components:
       properties:
         id:
           type: integer
+        employeeCode:
+          type: string
+          description: "Unique human-readable employee ID (e.g. EMP-000001)"
         firstName:
           type: string
         lastName:

@@ -241,11 +241,12 @@ function ProfileTab() {
       <div className="rounded-xl bg-muted/40 border border-border p-4 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Employment Details</p>
         <div className="grid grid-cols-3 gap-4">
+          <Field label="Employee ID"     value={(merged as { employeeCode?: string }).employeeCode ?? "—"} readOnly hint="Your unique employee identifier" />
           <Field label="Position"        value={merged.position       ?? "—"} readOnly />
           <Field label="Department"      value={merged.departmentName ?? "—"} readOnly />
-          <Field label="Employment Type" value={(merged.employmentType ?? "—").replace("_", " ")} readOnly />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="Employment Type" value={(merged.employmentType ?? "—").replace("_", " ")} readOnly />
           <Field label="Start Date" value={merged.startDate ?? "—"} readOnly />
           <Field label="Status"     value={(merged.status ?? "—").replace("_", " ")} readOnly />
         </div>

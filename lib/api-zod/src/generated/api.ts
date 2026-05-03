@@ -32,6 +32,10 @@ export const ListEmployeesResponse = zod.object({
   employees: zod.array(
     zod.object({
       id: zod.number(),
+      employeeCode: zod
+        .string()
+        .optional()
+        .describe("Unique human-readable employee ID (e.g. EMP-000001)"),
       firstName: zod.string(),
       lastName: zod.string(),
       email: zod.string(),
@@ -97,6 +101,10 @@ export const GetEmployeeParams = zod.object({
 
 export const GetEmployeeResponse = zod.object({
   id: zod.number(),
+  employeeCode: zod
+    .string()
+    .optional()
+    .describe("Unique human-readable employee ID (e.g. EMP-000001)"),
   firstName: zod.string(),
   lastName: zod.string(),
   email: zod.string(),
@@ -151,6 +159,10 @@ export const UpdateEmployeeBody = zod.object({
 
 export const UpdateEmployeeResponse = zod.object({
   id: zod.number(),
+  employeeCode: zod
+    .string()
+    .optional()
+    .describe("Unique human-readable employee ID (e.g. EMP-000001)"),
   firstName: zod.string(),
   lastName: zod.string(),
   email: zod.string(),

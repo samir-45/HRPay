@@ -12,6 +12,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
 import { Plus, X, Shield } from "lucide-react";
+import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
 function fmt(n: number | null | undefined) {
   if (n == null) return "—";
@@ -189,7 +190,15 @@ export default function Benefits() {
               <button onClick={() => setShowEnrollModal(false)} className="p-1.5 rounded text-muted-foreground hover:bg-muted/50"><X className="h-4 w-4" /></button>
             </div>
             <form onSubmit={e => { e.preventDefault(); createEnrollMut.mutate({ data: { employeeId: Number(enrollForm.employeeId), planId: Number(enrollForm.planId) } }); }} className="space-y-4">
-              <div><label className="block text-sm font-medium mb-1.5">Employee</label><select required value={enrollForm.employeeId} onChange={setE("employeeId")} className={inputCls}><option value="">Select employee</option>{(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Employee</label>
+                <EmployeeSearchSelect
+                  employees={empData?.employees ?? []}
+                  value={enrollForm.employeeId}
+                  onChange={v => setE("employeeId")({ target: { value: v } } as React.ChangeEvent<HTMLSelectElement>)}
+                  required
+                />
+              </div>
               <div><label className="block text-sm font-medium mb-1.5">Benefit Plan</label><select required value={enrollForm.planId} onChange={setE("planId")} className={inputCls}><option value="">Select plan</option>{planList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowEnrollModal(false)} className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50">Cancel</button>

@@ -153,6 +153,11 @@ export default function Employees() {
                       <div>
                         <p className="font-medium text-foreground">{emp.firstName} {emp.lastName}</p>
                         <p className="text-xs text-muted-foreground">{emp.position}</p>
+                        {emp.employeeCode && (
+                          <span className="inline-flex items-center px-1.5 py-px rounded text-[10px] font-mono font-semibold bg-primary/10 text-primary leading-tight mt-0.5">
+                            {emp.employeeCode}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -194,6 +199,11 @@ export default function Employees() {
                 <div className="min-w-0">
                   <p className="font-semibold text-foreground truncate">{emp.firstName} {emp.lastName}</p>
                   <p className="text-xs text-muted-foreground truncate">{emp.position}</p>
+                  {emp.employeeCode && (
+                    <span className="inline-flex items-center px-1.5 py-px rounded text-[10px] font-mono font-semibold bg-primary/10 text-primary leading-tight mt-0.5">
+                      {emp.employeeCode}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">

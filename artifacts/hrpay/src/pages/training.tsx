@@ -4,6 +4,7 @@ import { useListEmployees, getListEmployeesQueryKey } from "@workspace/api-clien
 import { useAuth, apiHeaders } from "@/components/auth-context";
 import { SkeletonCourseCards, SkeletonTableRows } from "@/components/skeletons";
 import { GraduationCap, Plus, X, BookOpen, Clock, Users, CheckCircle, PlayCircle } from "lucide-react";
+import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
 const API = "/api";
 const LIME = "hsl(82 80% 48%)";
@@ -318,10 +319,11 @@ export default function Training() {
               {!isEmployee && (
                 <div>
                   <label className="text-sm font-medium block mb-1.5">Employee</label>
-                  <select value={enrollForm.employeeId} onChange={e => setEnrollForm(p => ({ ...p, employeeId: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm">
-                    <option value="">Select employee…</option>
-                    {(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                  </select>
+                  <EmployeeSearchSelect
+                    employees={empData?.employees ?? []}
+                    value={enrollForm.employeeId}
+                    onChange={v => setEnrollForm(p => ({ ...p, employeeId: v }))}
+                  />
                 </div>
               )}
               <div>

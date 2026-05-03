@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
 import { Check, Plus, X, Clock } from "lucide-react";
+import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -167,10 +168,12 @@ export default function Time() {
               {!isEmployee && (
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Employee</label>
-                  <select required value={form.employeeId} onChange={set("employeeId")} className={inputCls}>
-                    <option value="">Select employee</option>
-                    {(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                  </select>
+                  <EmployeeSearchSelect
+                    employees={empData?.employees ?? []}
+                    value={form.employeeId}
+                    onChange={v => set("employeeId")({ target: { value: v } } as React.ChangeEvent<HTMLSelectElement>)}
+                    required
+                  />
                 </div>
               )}
               <div>

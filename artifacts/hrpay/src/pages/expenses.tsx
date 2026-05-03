@@ -6,6 +6,7 @@ import {
   Receipt, Plus, CheckCircle, XCircle, Clock, DollarSign,
   X, TrendingUp,
 } from "lucide-react";
+import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
 const API = "/api";
 const LIME = "hsl(82 80% 48%)";
@@ -207,10 +208,11 @@ export default function Expenses() {
               {!isEmployee && (
                 <div>
                   <label className="text-sm font-medium block mb-1.5">Employee</label>
-                  <select value={form.employeeId} onChange={e => setForm(p => ({ ...p, employeeId: e.target.value }))} className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-sm">
-                    <option value="">Select employee…</option>
-                    {(employees.data ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                  </select>
+                  <EmployeeSearchSelect
+                    employees={employees.data ?? []}
+                    value={form.employeeId}
+                    onChange={v => setForm(p => ({ ...p, employeeId: v }))}
+                  />
                 </div>
               )}
               <div>

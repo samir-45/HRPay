@@ -139,6 +139,11 @@ export default function EmployeeProfile() {
               <p className="text-sm text-muted-foreground">{emp.position}</p>
               {emp.departmentName && <p className="text-xs text-muted-foreground">{emp.departmentName}</p>}
             </div>
+            {emp.employeeCode && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-mono font-semibold tracking-wide">
+                {emp.employeeCode}
+              </span>
+            )}
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[emp.status] ?? "bg-gray-100"}`}>
               {emp.status.replace("_", " ")}
             </span>

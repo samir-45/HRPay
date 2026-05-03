@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
 import { CheckCircle2, Circle, Plus, X } from "lucide-react";
+import { EmployeeSearchSelect } from "@/components/employee-search-select";
 
 const PRIORITY_STYLES: Record<string, string> = {
   high: "bg-red-100 text-red-700",
@@ -142,7 +143,15 @@ export default function Onboarding() {
               <button onClick={() => setShowModal(false)} className="p-1.5 rounded text-muted-foreground hover:bg-muted/50"><X className="h-4 w-4" /></button>
             </div>
             <form onSubmit={e => { e.preventDefault(); createMut.mutate({ data: { title: form.title, description: form.description || undefined, category: form.category as "documentation" | "it_setup" | "training" | "introduction" | "compliance", priority: form.priority as "high" | "medium" | "low", assignedTo: form.assignedTo || undefined, employeeId: Number(form.employeeId), dueDate: form.dueDate || undefined } }); }} className="space-y-4">
-              <div><label className="block text-sm font-medium mb-1.5">Employee</label><select required value={form.employeeId} onChange={set("employeeId")} className={inputCls}><option value="">Select employee</option>{(empData?.employees ?? []).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Employee</label>
+                <EmployeeSearchSelect
+                  employees={empData?.employees ?? []}
+                  value={form.employeeId}
+                  onChange={v => set("employeeId")({ target: { value: v } } as React.ChangeEvent<HTMLSelectElement>)}
+                  required
+                />
+              </div>
               <div><label className="block text-sm font-medium mb-1.5">Task Title</label><input required value={form.title} onChange={set("title")} className={inputCls} placeholder="Complete I-9 verification" /></div>
               <div><label className="block text-sm font-medium mb-1.5">Description</label><textarea value={form.description} onChange={set("description")} className={`${inputCls} resize-none`} rows={2} /></div>
               <div className="grid grid-cols-2 gap-3">

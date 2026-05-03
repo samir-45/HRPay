@@ -39,6 +39,8 @@ export const EmployeeSalaryType = {
 
 export interface Employee {
   id: number;
+  /** Unique human-readable employee ID (e.g. EMP-000001) */
+  employeeCode?: string;
   firstName: string;
   lastName: string;
   email: string;

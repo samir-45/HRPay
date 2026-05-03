@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { employeesTable, departmentsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import {
   ListEmployeesQueryParams,
   CreateEmployeeBody,
@@ -15,6 +15,10 @@ import { getRequestUser } from "../lib/auth-helpers";
 
 const router = Router();
 
+function generateEmployeeCode(id: number): string {
+  return "EMP-" + String(id).padStart(6, "0");
+}
+
 router.get("/employees", async (req, res) => {
   const query = ListEmployeesQueryParams.parse(req.query);
   const { department, status, search, page, limit } = query;
@@ -25,6 +29,7 @@ router.get("/employees", async (req, res) => {
   let employees = await db
     .select({
       id: employeesTable.id,
+      employeeCode: employeesTable.employeeCode,
       firstName: employeesTable.firstName,
       lastName: employeesTable.lastName,
       email: employeesTable.email,
@@ -57,7 +62,8 @@ router.get("/employees", async (req, res) => {
         e.firstName.toLowerCase().includes(s) ||
         e.lastName.toLowerCase().includes(s) ||
         e.email.toLowerCase().includes(s) ||
-        e.position.toLowerCase().includes(s)
+        e.position.toLowerCase().includes(s) ||
+        (e.employeeCode ?? "").toLowerCase().includes(s)
     );
   }
 
@@ -76,11 +82,29 @@ router.get("/employees", async (req, res) => {
 
 router.post("/employees", async (req, res) => {
   const body = CreateEmployeeBody.parse(req.body);
-  const [employee] = await db.insert(employeesTable).values(body).returning();
+
+  const maxRow = await db
+    .select({ maxId: sql<number>`COALESCE(MAX(id), 0)` })
+    .from(employeesTable);
+  const nextId = (maxRow[0]?.maxId ?? 0) + 1;
+  const employeeCode = generateEmployeeCode(nextId);
+
+  const [employee] = await db
+    .insert(employeesTable)
+    .values({ ...body, employeeCode })
+    .returning();
+
+  if (employee.employeeCode == null) {
+    await db
+      .update(employeesTable)
+      .set({ employeeCode: generateEmployeeCode(employee.id) })
+      .where(eq(employeesTable.id, employee.id));
+    employee.employeeCode = generateEmployeeCode(employee.id);
+  }
 
   await notify(
     "New Employee Joined",
-    `${employee.firstName} ${employee.lastName} has been added as ${employee.position}.`,
+    `${employee.firstName} ${employee.lastName} (${employee.employeeCode}) has been added as ${employee.position}.`,
     "celebration"
   );
 
@@ -96,6 +120,7 @@ router.get("/employees/me", async (req, res) => {
   const [row] = await db
     .select({
       id: employeesTable.id,
+      employeeCode: employeesTable.employeeCode,
       firstName: employeesTable.firstName,
       lastName: employeesTable.lastName,
       email: employeesTable.email,
@@ -156,6 +181,7 @@ router.get("/employees/:id", async (req, res) => {
   const [row] = await db
     .select({
       id: employeesTable.id,
+      employeeCode: employeesTable.employeeCode,
       firstName: employeesTable.firstName,
       lastName: employeesTable.lastName,
       email: employeesTable.email,
