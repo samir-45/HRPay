@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth, apiHeaders } from "@/components/auth-context";
+import { useAuth } from "@/components/auth-context";
 import { SkeletonSettingsForm } from "@/components/skeletons";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -96,7 +96,7 @@ function ProfileTab() {
 
   const { data: profile, isLoading } = useQuery<EmployeeProfile>({
     queryKey: ["my-profile"],
-    queryFn: () => fetch(`${API}/employees/me`, { headers: apiHeaders(token) }).then(r => r.json()),
+    queryFn: () => fetch(`${API}/employees/me`).then(r => r.json()),
   });
 
   const [form, setForm] = useState<Partial<EmployeeProfile>>({});
@@ -107,7 +107,6 @@ function ProfileTab() {
     mutationFn: async () => {
       const r = await fetch(`${API}/employees/me`, {
         method: "PATCH",
-        headers: apiHeaders(token),
         body: JSON.stringify(form),
       });
       const data = await r.json() as Record<string, unknown>;
@@ -289,7 +288,7 @@ function SecurityTab() {
     if (form.next.length < 8)       { toast.error("Password too short",    { description: "Password must be at least 8 characters." }); return; }
     setPending(true);
     try {
-      const r = await fetch(`${API}/auth/change-password`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ currentPassword: form.current, newPassword: form.next }) });
+      const r = await fetch(`${API}/auth/change-password`, { method: "POST", body: JSON.stringify({ currentPassword: form.current, newPassword: form.next }) });
       const data = await r.json() as { success?: boolean; error?: string };
       if (!r.ok) { toast.error("Failed to change password", { description: data.error ?? "Please check your current password and try again." }); return; }
       toast.success("Password changed", { description: "Your password has been updated successfully." });
@@ -380,7 +379,7 @@ export default function Settings() {
 
   const settings = useQuery<CompanySettings>({
     queryKey: ["settings"],
-    queryFn: () => fetch(`${API}/settings`, { headers: apiHeaders(token) }).then(r => r.json()),
+    queryFn: () => fetch(`${API}/settings`).then(r => r.json()),
     enabled: !isEmployee,
   });
   const [form, setForm] = useState<Partial<CompanySettings>>({});
@@ -388,7 +387,7 @@ export default function Settings() {
   const set = (k: keyof CompanySettings) => (v: string) => setForm(p => ({ ...p, [k]: v }));
 
   const save = useMutation({
-    mutationFn: () => fetch(`${API}/settings`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify(form) }).then(r => r.json()),
+    mutationFn: () => fetch(`${API}/settings`, { method: "PATCH", body: JSON.stringify(form) }).then(r => r.json()),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["settings"] }); setSaved(true); setTimeout(() => setSaved(false), 2000); setForm({}); },
     onError: () => toast.error("Failed to save settings", { description: "Please check your input and try again." }),
   });

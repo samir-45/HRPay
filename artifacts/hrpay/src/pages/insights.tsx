@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth, apiHeaders } from "@/components/auth-context";
+import { useAuth } from "@/components/auth-context";
 import {
   Sparkles, RefreshCw, TrendingUp, TrendingDown, Minus,
   Users, Calculator, CalendarDays, Receipt, ListTodo,
@@ -145,13 +145,12 @@ function GeneratingSkeleton() {
 }
 
 export default function Insights() {
-  const { token } = useAuth();
   const qc = useQueryClient();
   const [generatingId, setGeneratingId] = useState<number | null>(null);
 
   const { data, isLoading } = useQuery<InsightsResponse>({
     queryKey: ["insights"],
-    queryFn: () => fetch(`${API}/insights`, { headers: apiHeaders(token) }).then(r => r.json()),
+    queryFn: () => fetch(`${API}/insights`).then(r => r.json()),
     refetchInterval: generatingId ? 3000 : false,
   });
 
@@ -169,7 +168,7 @@ export default function Insights() {
   }, [insight?.status, generatingId, qc]);
 
   const generate = useMutation({
-    mutationFn: () => fetch(`${API}/insights/generate`, { method: "POST", headers: apiHeaders(token) }).then(r => r.json()),
+    mutationFn: () => fetch(`${API}/insights/generate`, { method: "POST" }).then(r => r.json()),
     onSuccess: (data) => {
       if (data.error) { toast.error(data.error); return; }
       setGeneratingId(data.id);
@@ -182,7 +181,6 @@ export default function Insights() {
   const toggleEnabled = useMutation({
     mutationFn: (val: boolean) => fetch(`${API}/insights/settings`, {
       method: "PATCH",
-      headers: apiHeaders(token),
       body: JSON.stringify({ enabled: val }),
     }).then(r => r.json()),
     onSuccess: () => {

@@ -144,6 +144,13 @@ router.post("/benefits/enrollments", async (req, res) => {
   if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
 
   const body = CreateBenefitEnrollmentBody.parse(req.body);
+  
+  // Verify employee belongs to user's company
+  if (user.companyId) {
+    const emp = await db.query.employeesTable.findFirst({ where: (e) => eq(e.id, body.employeeId) });
+    if (!emp || emp.companyId !== user.companyId) { res.status(403).json({ error: "Forbidden" }); return; }
+  }
+
   const [enrollment] = await db.insert(benefitEnrollmentsTable).values(body).returning();
   res.status(201).json(enrollment);
 });

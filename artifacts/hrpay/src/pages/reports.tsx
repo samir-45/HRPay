@@ -39,11 +39,10 @@ function Section({ title, subtitle, icon: Icon, children }: { title: string; sub
 }
 
 export default function Reports() {
-  const { token } = useAuth();
-  const headcount = useQuery<HeadcountData>({ queryKey: ["report-headcount"], queryFn: () => fetch(`${API}/reports/headcount`, { headers: apiHeaders(token) }).then(r => r.json()) });
-  const payroll = useQuery<PayrollData>({ queryKey: ["report-payroll"], queryFn: () => fetch(`${API}/reports/payroll-summary`, { headers: apiHeaders(token) }).then(r => r.json()) });
-  const leave = useQuery<LeaveData>({ queryKey: ["report-leave"], queryFn: () => fetch(`${API}/reports/leave`, { headers: apiHeaders(token) }).then(r => r.json()) });
-  const attendance = useQuery<AttendanceData>({ queryKey: ["report-attendance"], queryFn: () => fetch(`${API}/reports/attendance`, { headers: apiHeaders(token) }).then(r => r.json()) });
+  const headcount = useQuery<HeadcountData>({ queryKey: ["report-headcount"], queryFn: () => fetch(`${API}/reports/headcount`).then(r => r.json()) });
+  const payroll = useQuery<PayrollData>({ queryKey: ["report-payroll"], queryFn: () => fetch(`${API}/reports/payroll-summary`).then(r => r.json()) });
+  const leave = useQuery<LeaveData>({ queryKey: ["report-leave"], queryFn: () => fetch(`${API}/reports/leave`).then(r => r.json()) });
+  const attendance = useQuery<AttendanceData>({ queryKey: ["report-attendance"], queryFn: () => fetch(`${API}/reports/attendance`).then(r => r.json()) });
 
   const hc = headcount.data;
   const pr = payroll.data;
