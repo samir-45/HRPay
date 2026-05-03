@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import {
   Users, Mail, Plus, X, Copy, Check, CheckCircle,
   Clock, UserX, Shield, Crown, ChevronDown, Loader2,
@@ -86,12 +87,14 @@ export default function TeamManagement() {
         body: JSON.stringify(inviteForm),
       });
       const data = await r.json() as { invitation?: any; tempPassword?: string; acceptUrl?: string; error?: string };
-      if (!r.ok) { setInviteError(data.error ?? "Failed to send invitation"); return; }
+      if (!r.ok) { setInviteError(data.error ?? "Failed to send invitation"); toast.error("Failed to send invitation"); return; }
+      toast.success("Invitation sent successfully");
       setInviteResult({ tempPassword: data.tempPassword!, email: inviteForm.email, acceptUrl: data.acceptUrl! });
       setInviteForm({ email: "", name: "", role: "employee" });
       await load();
     } catch {
       setInviteError("Something went wrong. Please try again.");
+      toast.error("Failed to send invitation");
     } finally {
       setInviting(false);
     }
@@ -99,18 +102,29 @@ export default function TeamManagement() {
 
   async function changeRole(userId: number, role: string) {
     setChangingRole(userId);
-    await fetch(`/api/companies/members/${userId}`, {
-      method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ role }),
-    });
-    await load();
-    setChangingRole(null);
+    try {
+      await fetch(`/api/companies/members/${userId}`, {
+        method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ role }),
+      });
+      toast.success("Role updated successfully");
+      await load();
+    } catch {
+      toast.error("Failed to update role");
+    } finally {
+      setChangingRole(null);
+    }
   }
 
   async function toggleActive(userId: number, isActive: boolean) {
-    await fetch(`/api/companies/members/${userId}`, {
-      method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ isActive: !isActive }),
-    });
-    await load();
+    try {
+      await fetch(`/api/companies/members/${userId}`, {
+        method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ isActive: !isActive }),
+      });
+      toast.success("Member status updated successfully");
+      await load();
+    } catch {
+      toast.error("Failed to update member status");
+    }
   }
 
   function copyText(text: string, key: string) {

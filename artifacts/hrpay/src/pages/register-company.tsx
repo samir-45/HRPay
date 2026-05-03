@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { ArrowRight, Check, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 
 const LIME = "hsl(82 80% 48%)";
 
@@ -66,6 +67,7 @@ export default function RegisterCompany() {
       const data = await r.json() as { token?: string; user?: any; error?: string };
       if (!r.ok) { setError(data.error ?? "Registration failed"); return; }
       localStorage.setItem("hrpay_token", data.token!);
+      toast.success("Company registered successfully");
       await login(form.adminEmail, form.adminPassword);
       setLocation("/");
     } catch {

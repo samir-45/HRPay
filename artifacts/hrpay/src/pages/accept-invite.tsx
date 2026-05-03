@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearch, useLocation } from "wouter";
 import { useAuth } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import { Check, AlertCircle, Loader2 } from "lucide-react";
 
 const LIME = "hsl(82 80% 48%)";
@@ -41,12 +42,14 @@ export default function AcceptInvite() {
       const data = await r.json() as { token?: string; user?: any; error?: string };
       if (!r.ok) { setError(data.error ?? "Failed to accept invitation"); return; }
       localStorage.setItem("hrpay_token", data.token!);
+      toast.success("Invitation accepted successfully");
       setDone(true);
       setTimeout(() => {
         window.location.href = "/";
       }, 2000);
     } catch {
       setError("Something went wrong. Please try again.");
+      toast.error("Failed to accept invitation");
     } finally {
       setAccepting(false);
     }

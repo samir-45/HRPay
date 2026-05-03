@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import {
   LayoutDashboard, Building2, Users, CreditCard, Settings,
   Crown, LogOut, RefreshCw, Search, TrendingUp, DollarSign,
@@ -53,13 +54,19 @@ function useCompanyPatch(token: string | null, onDone: () => void) {
   const [saving, setSaving] = useState(false);
   async function save(id: number, body: Record<string, unknown>) {
     setSaving(true);
-    await fetch(`/api/companies/${id}`, {
-      method: "PATCH",
-      headers: apiHeaders(token),
-      body: JSON.stringify(body),
-    });
-    await onDone();
-    setSaving(false);
+    try {
+      await fetch(`/api/companies/${id}`, {
+        method: "PATCH",
+        headers: apiHeaders(token),
+        body: JSON.stringify(body),
+      });
+      toast.success("Company updated successfully");
+      await onDone();
+    } catch {
+      toast.error("Failed to update company");
+    } finally {
+      setSaving(false);
+    }
   }
   return { save, saving };
 }

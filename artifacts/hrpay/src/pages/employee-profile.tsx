@@ -14,6 +14,7 @@ import {
   getListTimeEntriesQueryKey,
 } from "@workspace/api-client-react";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import {
   ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, DollarSign,
   UserPlus, X, Copy, Check, Loader2, CheckCircle, AlertCircle,
@@ -104,11 +105,14 @@ export default function EmployeeProfile() {
       const data = await r.json() as { tempPassword?: string; acceptUrl?: string; error?: string };
       if (!r.ok) {
         setInviteError(data.error ?? "Failed to create invitation");
+        toast.error("Failed to send invitation");
         return;
       }
+      toast.success("Invitation sent successfully");
       setInviteResult({ email: emp.email, tempPassword: data.tempPassword!, acceptUrl: data.acceptUrl! });
     } catch {
       setInviteError("Something went wrong. Please try again.");
+      toast.error("Failed to send invitation");
     } finally {
       setInviting(false);
     }

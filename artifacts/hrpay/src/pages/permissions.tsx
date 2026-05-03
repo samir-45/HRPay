@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth, apiHeaders } from "@/components/auth-context";
+import { toast } from "@/components/ui/sonner";
 import {
   usePermissions, PermissionsMap, PowerPermissionsMap,
   DEFAULT_PERMISSIONS, DEFAULT_POWERS, ALL_FEATURES, ALL_POWERS,
@@ -164,15 +165,21 @@ export default function Permissions() {
 
   async function save() {
     setSaving(true);
-    await fetch("/api/companies/permissions", {
-      method: "PUT",
-      headers: apiHeaders(token),
-      body: JSON.stringify({ permissions: perms, powers }),
-    });
-    setSaving(false);
-    setSaved(true);
-    refetch();
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      await fetch("/api/companies/permissions", {
+        method: "PUT",
+        headers: apiHeaders(token),
+        body: JSON.stringify({ permissions: perms, powers }),
+      });
+      toast.success("Permissions saved successfully");
+      setSaved(true);
+      refetch();
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      toast.error("Failed to save permissions");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
