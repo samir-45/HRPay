@@ -33,11 +33,26 @@ function fmt(n: number | null | undefined) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
-function Avatar({ name, size = 14 }: { name: string; size?: number }) {
+function Avatar({ name, avatarUrl, size = 14 }: { name: string; avatarUrl?: string | null; size?: number }) {
   const initials = name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   const hue = (name.charCodeAt(0) * 37) % 360;
+  const px = size * 4;
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        className="shrink-0 rounded-full object-cover"
+        style={{ width: px, height: px }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; (e.currentTarget.nextSibling as HTMLElement)!.style.display = "flex"; }}
+      />
+    );
+  }
   return (
-    <div className={`flex size-${size} shrink-0 items-center justify-center rounded-full text-xl font-bold text-white`} style={{ background: `hsl(${hue} 60% 45%)` }}>
+    <div
+      className="shrink-0 flex items-center justify-center rounded-full font-bold text-white"
+      style={{ width: px, height: px, background: `hsl(${hue} 60% 45%)`, fontSize: px * 0.35 }}
+    >
       {initials}
     </div>
   );
@@ -118,7 +133,7 @@ export default function EmployeeProfile() {
         {/* Profile Card */}
         <div className="bg-white rounded-xl border border-border p-6 space-y-5">
           <div className="flex flex-col items-center text-center gap-3">
-            <Avatar name={fullName} size={16} />
+            <Avatar name={fullName} avatarUrl={emp.avatarUrl} size={16} />
             <div>
               <h3 className="font-semibold text-lg text-foreground">{fullName}</h3>
               <p className="text-sm text-muted-foreground">{emp.position}</p>
@@ -347,7 +362,7 @@ export default function EmployeeProfile() {
               <div className="space-y-4">
                 <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
                   <div className="flex items-center gap-3">
-                    <Avatar name={fullName} size={10} />
+                    <Avatar name={fullName} avatarUrl={emp.avatarUrl} size={10} />
                     <div>
                       <p className="font-semibold text-foreground text-sm">{fullName}</p>
                       <p className="text-xs text-muted-foreground">{emp.email}</p>

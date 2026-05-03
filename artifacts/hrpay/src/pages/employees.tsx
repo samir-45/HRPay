@@ -22,9 +22,19 @@ const TYPE_LABELS: Record<string, string> = {
   intern: "Intern",
 };
 
-function Avatar({ name }: { name: string }) {
+function Avatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
   const initials = name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   const hue = (name.charCodeAt(0) * 37) % 360;
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        className="size-9 shrink-0 rounded-full object-cover"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+    );
+  }
   return (
     <div className="flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white" style={{ background: `hsl(${hue} 60% 45%)` }}>
       {initials}
@@ -139,7 +149,7 @@ export default function Employees() {
                 <tr key={emp.id} className="hover:bg-muted/20 transition-colors">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <Avatar name={`${emp.firstName} ${emp.lastName}`} />
+                      <Avatar name={`${emp.firstName} ${emp.lastName}`} avatarUrl={emp.avatarUrl} />
                       <div>
                         <p className="font-medium text-foreground">{emp.firstName} {emp.lastName}</p>
                         <p className="text-xs text-muted-foreground">{emp.position}</p>
@@ -180,7 +190,7 @@ export default function Employees() {
           {employees.map((emp) => (
             <div key={emp.id} className="bg-white rounded-xl border border-border p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3">
-                <Avatar name={`${emp.firstName} ${emp.lastName}`} />
+                <Avatar name={`${emp.firstName} ${emp.lastName}`} avatarUrl={emp.avatarUrl} />
                 <div className="min-w-0">
                   <p className="font-semibold text-foreground truncate">{emp.firstName} {emp.lastName}</p>
                   <p className="text-xs text-muted-foreground truncate">{emp.position}</p>
