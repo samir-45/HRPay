@@ -635,9 +635,9 @@ export default function Help() {
   const isSearching = search.trim() !== "";
 
   return (
-    <div className="flex h-full gap-0 -m-5">
+    <div className="flex gap-0 -m-5" style={{ height: "calc(100vh - 3.5rem)" }}>
       {/* Left sidebar */}
-      <aside className="w-56 shrink-0 border-r border-border bg-white flex flex-col h-full overflow-hidden">
+      <aside className="w-56 shrink-0 border-r border-border bg-white flex flex-col overflow-hidden">
         <div className="p-3.5 border-b border-border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
