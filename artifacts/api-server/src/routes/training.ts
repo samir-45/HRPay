@@ -35,7 +35,7 @@ router.get("/training/courses/:id", async (req, res) => {
   if (cid) conditions.push(eq(coursesTable.companyId, cid));
 
   const [course] = await db.select().from(coursesTable).where(and(...conditions));
-  if (!course) return res.status(404).json({ error: "Not found" });
+  if (!course) { res.status(404).json({ error: "Not found" }); return; }
 
   const enrolledConditions = [eq(enrollmentsTable.courseId, course.id)];
   if (cid) enrolledConditions.push(eq(employeesTable.companyId, cid));
@@ -89,7 +89,7 @@ router.patch("/training/courses/:id", async (req, res) => {
     .set({ ...req.body, updatedAt: new Date() })
     .where(and(eq(coursesTable.id, Number(req.params.id)), eq(coursesTable.companyId, user.companyId)))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
 
@@ -170,7 +170,7 @@ router.patch("/training/enrollments/:id", async (req, res) => {
     .set(req.body)
     .where(eq(enrollmentsTable.id, Number(req.params.id)))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
 

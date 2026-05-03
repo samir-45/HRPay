@@ -51,9 +51,11 @@ router.post("/payroll/runs", async (req, res) => {
   if (!user) return;
 
   const body = CreatePayrollRunBody.parse(req.body);
+  const toDateStr = (v: unknown) => v instanceof Date ? (v as Date).toISOString().split("T")[0] : v as string;
   const [run] = await db
     .insert(payrollRunsTable)
-    .values({ ...body, companyId: user.companyId })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .values({ ...body, companyId: user.companyId, periodStart: toDateStr((body as any).periodStart), periodEnd: toDateStr((body as any).periodEnd), payDate: toDateStr((body as any).payDate) } as any)
     .returning();
 
   await notify(
@@ -76,7 +78,7 @@ router.get("/payroll/runs/:id", async (req, res) => {
   if (user.companyId) conditions.push(eq(payrollRunsTable.companyId, user.companyId));
 
   const [run] = await db.select().from(payrollRunsTable).where(and(...conditions));
-  if (!run) return res.status(404).json({ error: "Not found" });
+  if (!run) { res.status(404).json({ error: "Not found" }); return; }
   res.json(mapRun(run));
 });
 
@@ -89,8 +91,8 @@ router.post("/payroll/runs/:id/process", async (req, res) => {
   if (user.companyId) conditions.push(eq(payrollRunsTable.companyId, user.companyId));
 
   const [run] = await db.select().from(payrollRunsTable).where(and(...conditions));
-  if (!run) return res.status(404).json({ error: "Not found" });
-  if (run.status !== "draft") return res.status(400).json({ error: "Payroll run already processed" });
+  if (!run) { res.status(404).json({ error: "Not found" }); return; }
+  if (run.status !== "draft") { res.status(400).json({ error: "Payroll run already processed" }); return; }
 
   const empConditions = [eq(employeesTable.status, "active")];
   if (user.companyId) empConditions.push(eq(employeesTable.companyId, user.companyId));

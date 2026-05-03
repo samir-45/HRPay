@@ -79,11 +79,11 @@ router.get("/expenses/:id", async (req, res) => {
     .leftJoin(employeesTable, eq(expenseClaimsTable.employeeId, employeesTable.id))
     .where(and(...conditions));
 
-  if (!row) return res.status(404).json({ error: "Not found" });
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
 
   /* Employees can only view their own expenses */
   if (user.role === "employee" && user.employeeId && row.employeeId !== user.employeeId) {
-    return res.status(403).json({ error: "Forbidden" });
+    res.status(403).json({ error: "Forbidden" }); return;
   }
 
   res.json({ ...row, amount: row.amount ? Number(row.amount) : null });
@@ -102,12 +102,12 @@ router.post("/expenses", async (req, res) => {
   };
 
   if (!employeeId || !title || !amount || !expenseDate) {
-    return res.status(400).json({ error: "employeeId, title, amount, expenseDate are required" });
+    res.status(400).json({ error: "employeeId, title, amount, expenseDate are required" }); return;
   }
 
   /* Employees can only submit expenses for themselves */
   if (user.role === "employee" && user.employeeId && Number(employeeId) !== user.employeeId) {
-    return res.status(403).json({ error: "Cannot submit expenses on behalf of another employee" });
+    res.status(403).json({ error: "Cannot submit expenses on behalf of another employee" }); return;
   }
 
   const [claim] = await db
@@ -144,7 +144,7 @@ router.patch("/expenses/:id/status", async (req, res) => {
     status?: string; reviewNotes?: string; reviewedBy?: string;
   };
   if (!["approved", "rejected", "pending"].includes(status ?? "")) {
-    return res.status(400).json({ error: "Invalid status" });
+    res.status(400).json({ error: "Invalid status" }); return;
   }
 
   const id = Number(req.params.id);
@@ -161,8 +161,8 @@ router.patch("/expenses/:id/status", async (req, res) => {
     .leftJoin(employeesTable, eq(expenseClaimsTable.employeeId, employeesTable.id))
     .where(eq(expenseClaimsTable.id, id));
 
-  if (!existing) return res.status(404).json({ error: "Not found" });
-  if (cid && existing.companyId !== cid) return res.status(403).json({ error: "Forbidden" });
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  if (cid && existing.companyId !== cid) { res.status(403).json({ error: "Forbidden" }); return; }
 
   const [updated] = await db
     .update(expenseClaimsTable)
@@ -174,7 +174,7 @@ router.patch("/expenses/:id/status", async (req, res) => {
     })
     .where(eq(expenseClaimsTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
 
   if (status === "approved") {
     await notify(

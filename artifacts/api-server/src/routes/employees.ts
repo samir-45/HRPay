@@ -141,7 +141,8 @@ router.post("/employees", async (req, res) => {
 
   const [employee] = await db
     .insert(employeesTable)
-    .values({ ...body, companyId: user.companyId, employeeCode })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .values({ ...body, companyId: user.companyId, employeeCode, startDate: body.startDate instanceof Date ? body.startDate.toISOString().split("T")[0] : body.startDate, salary: body.salary != null ? String(body.salary) : undefined } as any)
     .returning();
 
   if (employee.employeeCode == null) {
@@ -273,7 +274,7 @@ router.get("/employees/:id", async (req, res) => {
     .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
     .where(and(...conditions));
 
-  if (!row) return res.status(404).json({ error: "Not found" });
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
   res.json(row);
 });
 
@@ -285,10 +286,11 @@ router.put("/employees/:id", async (req, res) => {
   const body = UpdateEmployeeBody.parse(req.body);
   const [updated] = await db
     .update(employeesTable)
-    .set({ ...body, updatedAt: new Date() })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .set({ ...body, salary: (body as any).salary != null ? String((body as any).salary) : undefined, startDate: (body as any).startDate instanceof Date ? (body as any).startDate.toISOString().split("T")[0] : (body as any).startDate, updatedAt: new Date() } as any)
     .where(and(eq(employeesTable.id, id), eq(employeesTable.companyId, user.companyId)))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
 

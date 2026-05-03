@@ -65,7 +65,8 @@ router.post("/onboarding/tasks", async (req, res) => {
   }
 
   const body = CreateOnboardingTaskBody.parse(req.body);
-  const [task] = await db.insert(onboardingTasksTable).values(body).returning();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [task] = await db.insert(onboardingTasksTable).values({ ...body, dueDate: (body as any).dueDate instanceof Date ? (body as any).dueDate.toISOString().split("T")[0] : (body as any).dueDate } as any).returning();
   res.status(201).json(task);
 });
 
@@ -86,15 +87,15 @@ router.post("/onboarding/tasks/:id/complete", async (req, res) => {
     .leftJoin(employeesTable, eq(onboardingTasksTable.employeeId, employeesTable.id))
     .where(eq(onboardingTasksTable.id, id));
 
-  if (!task) return res.status(404).json({ error: "Not found" });
+  if (!task) { res.status(404).json({ error: "Not found" }); return; }
 
   if (user.companyId && task.companyId !== user.companyId) {
-    return res.status(403).json({ error: "Forbidden" });
+    res.status(403).json({ error: "Forbidden" }); return;
   }
 
   /* Employees can only complete their own tasks */
   if (user.role === "employee" && user.employeeId && task.employeeId !== user.employeeId) {
-    return res.status(403).json({ error: "Forbidden" });
+    res.status(403).json({ error: "Forbidden" }); return;
   }
 
   const [updated] = await db
@@ -102,7 +103,7 @@ router.post("/onboarding/tasks/:id/complete", async (req, res) => {
     .set({ isCompleted: true, completedAt: new Date() })
     .where(eq(onboardingTasksTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
 

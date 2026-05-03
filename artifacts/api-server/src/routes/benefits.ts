@@ -54,7 +54,8 @@ router.post("/benefits/plans", async (req, res) => {
   const body = CreateBenefitPlanBody.parse(req.body);
   const [plan] = await db
     .insert(benefitPlansTable)
-    .values({ ...body, companyId: user.companyId })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .values({ ...body, companyId: user.companyId, employeeCost: body.employeeCost != null ? String(body.employeeCost) : undefined, employerCost: body.employerCost != null ? String(body.employerCost) : undefined } as any)
     .returning();
 
   res.status(201).json({
@@ -76,7 +77,7 @@ router.patch("/benefits/plans/:id", async (req, res) => {
     .where(and(eq(benefitPlansTable.id, id), eq(benefitPlansTable.companyId, user.companyId)))
     .returning();
 
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json({
     ...updated,
     employeeCost: Number(updated.employeeCost ?? 0),

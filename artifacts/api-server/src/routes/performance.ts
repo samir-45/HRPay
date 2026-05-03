@@ -90,10 +90,10 @@ router.patch("/performance/goals/:id", async (req, res) => {
     .leftJoin(employeesTable, eq(goalsTable.employeeId, employeesTable.id))
     .where(eq(goalsTable.id, id));
 
-  if (!existing) return res.status(404).json({ error: "Not found" });
-  if (cid && existing.companyId !== cid) return res.status(403).json({ error: "Forbidden" });
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  if (cid && existing.companyId !== cid) { res.status(403).json({ error: "Forbidden" }); return; }
   if (user.role === "employee" && user.employeeId && existing.employeeId !== user.employeeId) {
-    return res.status(403).json({ error: "Forbidden" });
+    res.status(403).json({ error: "Forbidden" }); return;
   }
 
   const [updated] = await db
@@ -101,7 +101,7 @@ router.patch("/performance/goals/:id", async (req, res) => {
     .set({ ...req.body, updatedAt: new Date() })
     .where(eq(goalsTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
 
@@ -234,7 +234,7 @@ router.patch("/performance/reviews/:id", async (req, res) => {
     .set({ ...req.body, updatedAt: new Date() })
     .where(eq(performanceReviewsTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
 

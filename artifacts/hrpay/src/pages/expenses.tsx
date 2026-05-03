@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
 import { usePermissions } from "@/components/permissions-context";
+import { toast } from "@/components/ui/sonner";
 import { SkeletonTableRows } from "@/components/skeletons";
 import {
   Receipt, Plus, CheckCircle, XCircle, Clock, DollarSign,

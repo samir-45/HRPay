@@ -6,7 +6,7 @@ import { getRequestUser, requireCompanyUser, requireNonEmployee } from "../lib/a
 
 const router = Router();
 
-function mapAsset(a: typeof assetsTable.$inferSelect & { employeeFirstName?: string | null; employeeLastName?: string | null }) {
+function mapAsset(a: { purchaseCost?: string | null; employeeFirstName?: string | null; employeeLastName?: string | null; [key: string]: unknown }) {
   return {
     ...a,
     purchaseCost: a.purchaseCost ? Number(a.purchaseCost) : null,
@@ -64,7 +64,7 @@ router.get("/assets/:id", async (req, res) => {
   if (cid) conditions.push(eq(assetsTable.companyId, cid));
 
   const [asset] = await db.select().from(assetsTable).where(and(...conditions));
-  if (!asset) return res.status(404).json({ error: "Not found" });
+  if (!asset) { res.status(404).json({ error: "Not found" }); return; }
   res.json({ ...asset, purchaseCost: asset.purchaseCost ? Number(asset.purchaseCost) : null });
 });
 
@@ -86,7 +86,7 @@ router.post("/assets", async (req, res) => {
     status?: string; location?: string; warrantyExpiry?: string; notes?: string;
   };
 
-  if (!name) return res.status(400).json({ error: "name is required" });
+  if (!name) { res.status(400).json({ error: "name is required" }); return; }
 
   const [asset] = await db
     .insert(assetsTable)
@@ -123,7 +123,7 @@ router.patch("/assets/:id", async (req, res) => {
     .set({ ...req.body, updatedAt: new Date() })
     .where(and(eq(assetsTable.id, Number(req.params.id)), eq(assetsTable.companyId, user.companyId)))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json({ ...updated, purchaseCost: updated.purchaseCost ? Number(updated.purchaseCost) : null });
 });
 
@@ -155,7 +155,7 @@ router.patch("/assets/:id/assign", async (req, res) => {
     .set(updates)
     .where(and(eq(assetsTable.id, id), eq(assetsTable.companyId, user.companyId)))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json({ ...updated, purchaseCost: updated.purchaseCost ? Number(updated.purchaseCost) : null });
 });
 

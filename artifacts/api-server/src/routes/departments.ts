@@ -49,7 +49,8 @@ router.post("/departments", async (req, res) => {
   const body = CreateDepartmentBody.parse(req.body);
   const [dept] = await db
     .insert(departmentsTable)
-    .values({ ...body, companyId: user.companyId })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .values({ ...body, companyId: user.companyId, budget: body.budget != null ? String(body.budget) : undefined } as any)
     .returning();
   res.status(201).json({ ...dept, budget: dept.budget ? Number(dept.budget) : null, headCount: 0 });
 });
@@ -62,10 +63,11 @@ router.put("/departments/:id", async (req, res) => {
   const body = UpdateDepartmentBody.parse(req.body);
   const [updated] = await db
     .update(departmentsTable)
-    .set({ ...body, updatedAt: new Date() })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .set({ ...body, budget: body.budget != null ? String(body.budget) : undefined, updatedAt: new Date() } as any)
     .where(and(eq(departmentsTable.id, id), eq(departmentsTable.companyId, user.companyId)))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json({ ...updated, budget: updated.budget ? Number(updated.budget) : null });
 });
 

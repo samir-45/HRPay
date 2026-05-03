@@ -81,7 +81,8 @@ router.post("/leave/requests", async (req, res) => {
 
   const [request] = await db
     .insert(leaveRequestsTable)
-    .values({ ...body, days: String(days) })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .values({ ...body, startDate: typeof body.startDate === "object" ? (body.startDate as Date).toISOString().split("T")[0] : body.startDate, endDate: typeof body.endDate === "object" ? (body.endDate as Date).toISOString().split("T")[0] : body.endDate, days: String(days) } as any)
     .returning();
 
   const year = new Date().getFullYear();
@@ -132,14 +133,14 @@ router.post("/leave/requests/:id/approve", async (req, res) => {
     .select()
     .from(leaveRequestsTable)
     .where(eq(leaveRequestsTable.id, id));
-  if (!existing) return res.status(404).json({ error: "Not found" });
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
 
   const [updated] = await db
     .update(leaveRequestsTable)
     .set({ status: "approved", reviewedBy: reviewedBy ?? null, reviewedAt: new Date() })
     .where(eq(leaveRequestsTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
 
   const year = new Date(existing.startDate).getFullYear();
   const days = existing.days ? Number(existing.days) : 0;
@@ -179,14 +180,14 @@ router.post("/leave/requests/:id/reject", async (req, res) => {
     .select()
     .from(leaveRequestsTable)
     .where(eq(leaveRequestsTable.id, id));
-  if (!existing) return res.status(404).json({ error: "Not found" });
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
 
   const [updated] = await db
     .update(leaveRequestsTable)
     .set({ status: "rejected", reviewedBy: reviewedBy ?? null, reviewedAt: new Date() })
     .where(eq(leaveRequestsTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
 
   const year = new Date(existing.startDate).getFullYear();
   const days = existing.days ? Number(existing.days) : 0;

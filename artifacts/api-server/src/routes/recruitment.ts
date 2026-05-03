@@ -75,7 +75,7 @@ router.patch("/recruitment/jobs/:id", async (req, res) => {
     .set({ ...req.body, updatedAt: new Date() })
     .where(eq(jobPostingsTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
 
@@ -164,7 +164,7 @@ router.patch("/recruitment/applications/:id", async (req, res) => {
     .set({ ...req.body, updatedAt: new Date() })
     .where(eq(applicationsTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
 

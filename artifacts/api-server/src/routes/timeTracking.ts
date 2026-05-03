@@ -100,7 +100,7 @@ router.post("/time/entries", async (req, res) => {
   };
 
   if (!employeeId || !date) {
-    return res.status(400).json({ error: "employeeId and date are required" });
+    res.status(400).json({ error: "employeeId and date are required" }); return;
   }
 
   let computedHours: string | undefined;
@@ -145,9 +145,46 @@ router.post("/time/entries/bulk-approve", async (req, res) => {
 
   const { ids } = req.body as { ids: number[] };
   if (!Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: "ids array is required" });
+    res.status(400).json({ error: "ids array is required" }); return;
   }
 
+  const cid = user.companyId;
+
+  // If company-scoped, only approve entries belonging to this company's employees
+  if (cid) {
+    // Fetch entries with their employee's company to verify ownership
+    const entries = await db
+      .select({ id: timeEntriesTable.id })
+      .from(timeEntriesTable)
+      .innerJoin(employeesTable, and(
+        eq(timeEntriesTable.employeeId, employeesTable.id),
+        eq(employeesTable.companyId, cid)
+      ))
+      .where(and(inArray(timeEntriesTable.id, ids), eq(timeEntriesTable.status, "pending")));
+
+    const validIds = entries.map(e => e.id);
+    if (validIds.length === 0) {
+      res.json({ count: 0 }); return;
+    }
+
+    const updated = await db
+      .update(timeEntriesTable)
+      .set({ status: "approved" })
+      .where(inArray(timeEntriesTable.id, validIds))
+      .returning();
+
+    await notify(
+      "Time Entries Approved",
+      `${updated.length} time entries have been bulk approved.`,
+      "success",
+      "System",
+      cid
+    );
+
+    res.json({ count: updated.length }); return;
+  }
+
+  // Super admin: approve all provided pending entries
   const updated = await db
     .update(timeEntriesTable)
     .set({ status: "approved" })
@@ -159,7 +196,7 @@ router.post("/time/entries/bulk-approve", async (req, res) => {
     `${updated.length} time entries have been bulk approved.`,
     "success",
     "System",
-    user.companyId
+    null
   );
 
   res.json({ count: updated.length });
@@ -171,12 +208,27 @@ router.post("/time/entries/:id/approve", async (req, res) => {
   if (!user) return;
 
   const id = Number(req.params.id);
+  const cid = user.companyId;
+
+  // Verify the time entry belongs to this company before approving
+  if (cid) {
+    const [check] = await db
+      .select({ id: timeEntriesTable.id })
+      .from(timeEntriesTable)
+      .innerJoin(employeesTable, and(
+        eq(timeEntriesTable.employeeId, employeesTable.id),
+        eq(employeesTable.companyId, cid)
+      ))
+      .where(eq(timeEntriesTable.id, id));
+    if (!check) { res.status(404).json({ error: "Not found" }); return; }
+  }
+
   const [updated] = await db
     .update(timeEntriesTable)
     .set({ status: "approved" })
     .where(eq(timeEntriesTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
 
   await notify(
     "Time Entry Approved",
@@ -195,12 +247,27 @@ router.post("/time/entries/:id/reject", async (req, res) => {
   if (!user) return;
 
   const id = Number(req.params.id);
+  const cid = user.companyId;
+
+  // Verify the time entry belongs to this company before rejecting
+  if (cid) {
+    const [check] = await db
+      .select({ id: timeEntriesTable.id })
+      .from(timeEntriesTable)
+      .innerJoin(employeesTable, and(
+        eq(timeEntriesTable.employeeId, employeesTable.id),
+        eq(employeesTable.companyId, cid)
+      ))
+      .where(eq(timeEntriesTable.id, id));
+    if (!check) { res.status(404).json({ error: "Not found" }); return; }
+  }
+
   const [updated] = await db
     .update(timeEntriesTable)
     .set({ status: "rejected" })
     .where(eq(timeEntriesTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Not found" });
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
 
   await notify(
     "Time Entry Rejected",

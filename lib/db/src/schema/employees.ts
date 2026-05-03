@@ -1,11 +1,12 @@
 import { pgTable, serial, text, numeric, integer, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { companiesTable } from "./companies";
 
 export const employeesTable = pgTable("employees", {
   id: serial("id").primaryKey(),
   employeeCode: text("employee_code").unique(),
-  companyId: integer("company_id"),
+  companyId: integer("company_id").notNull().references(() => companiesTable.id),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),

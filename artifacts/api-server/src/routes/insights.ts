@@ -248,7 +248,7 @@ router.post("/insights/generate", async (req, res) => {
 
   const settings = (company?.settings ?? {}) as Record<string, unknown>;
   if (settings.aiInsightsEnabled === false) {
-    return res.status(403).json({ error: "AI Insights is disabled for this company." });
+    res.status(403).json({ error: "AI Insights is disabled for this company." }); return;
   }
 
   const weekOf = getWeekMonday();
@@ -294,7 +294,7 @@ router.get("/insights/:id/poll", async (req, res) => {
   const [insight] = await db.select().from(companyInsightsTable)
     .where(and(eq(companyInsightsTable.id, id), eq(companyInsightsTable.companyId, user.companyId!)));
 
-  if (!insight) return res.status(404).json({ error: "Not found" });
+  if (!insight) { res.status(404).json({ error: "Not found" }); return; }
   res.json(insight);
 });
 

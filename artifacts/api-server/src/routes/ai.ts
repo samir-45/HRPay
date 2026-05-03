@@ -28,7 +28,7 @@ router.post("/ai/chat", async (req, res) => {
 Current HR Data Snapshot:
 - Active employees on system: see employee records
 - Pending leave requests: ${pendingLeave.length}
-- Recent payroll runs: ${recentPayroll.map(r => `${r.periodStart} (${r.status}, gross: $${r.totalGross})`).join(", ")}
+- Recent payroll runs: ${recentPayroll.map(r => `${r.periodStart} (${r.status}, gross: $${r.totalGrossPay})`).join(", ")}
 - Current page: ${page ?? "unknown"}
 ${contextData ? `\nPage context: ${JSON.stringify(contextData)}` : ""}`;
 
@@ -64,7 +64,7 @@ ${contextData ? `\nPage context: ${JSON.stringify(contextData)}` : ""}`;
   } else if (lower.includes("payroll") || lower.includes("salary") || lower.includes("pay")) {
     const latest = recentPayroll[0];
     reply = latest
-      ? `The most recent payroll run was for the period **${latest.periodStart} – ${latest.periodEnd}** with a total gross of **$${Number(latest.totalGross ?? 0).toLocaleString()}** (status: ${latest.status}). To process payroll, go to the Payroll page and click "Process Run" on any draft payroll run.`
+      ? `The most recent payroll run was for the period **${latest.periodStart} – ${latest.periodEnd}** with a total gross of **$${Number(latest.totalGrossPay ?? 0).toLocaleString()}** (status: ${latest.status}). To process payroll, go to the Payroll page and click "Process Run" on any draft payroll run.`
       : "No payroll runs found. Create a payroll run from the Payroll page.";
   } else if (lower.includes("employee") || lower.includes("hire") || lower.includes("staff") || lower.includes("headcount")) {
     reply = `Use the **Employees** page to manage your workforce. You can add employees, view profiles, track employment history, and manage documents. Use the Onboarding page to set up tasks for new hires. The Departments page shows headcount by team.`;
