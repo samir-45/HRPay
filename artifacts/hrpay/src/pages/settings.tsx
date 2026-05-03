@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
 import { SkeletonSettingsForm } from "@/components/skeletons";
-import { Settings as SettingsIcon, Building2, CreditCard, Globe, Shield, Bell, Save } from "lucide-react";
+import { Settings as SettingsIcon, Building2, CreditCard, Globe, Shield, Bell, Save, KeyRound, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
 
 const API = "/api";
 const LIME = "hsl(82 80% 48%)";
@@ -62,25 +62,111 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
 }
 
 function SecurityTab() {
-  const ITEMS = [
-    { label: "Require MFA for HR Admins", desc: "All admin accounts must enable two-factor authentication", defaultEnabled: false },
+  const { token } = useAuth();
+  const [form, setForm] = useState({ current: "", next: "", confirm: "" });
+  const [show, setShow] = useState({ current: false, next: false, confirm: false });
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [errMsg, setErrMsg] = useState("");
+
+  const TOGGLES = [
     { label: "Session Timeout", desc: "Automatically log out inactive users after 30 minutes", defaultEnabled: true },
     { label: "Login Attempt Lockout", desc: "Lock accounts after 5 consecutive failed login attempts", defaultEnabled: true },
     { label: "Audit All Actions", desc: "Log every create, update, and delete action with user context", defaultEnabled: true },
   ];
-  const [enabled, setEnabled] = useState<boolean[]>(ITEMS.map(i => i.defaultEnabled));
-  const toggle = (idx: number) => setEnabled(prev => prev.map((v, i) => i === idx ? !v : v));
+  const [enabled, setEnabled] = useState<boolean[]>(TOGGLES.map(i => i.defaultEnabled));
+
+  const inputCls = "w-full rounded-xl border border-border bg-muted/30 px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 transition-all pr-10";
+
+  async function changePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    setErrMsg("");
+    if (form.next !== form.confirm) { setStatus("error"); setErrMsg("New passwords do not match"); return; }
+    if (form.next.length < 8) { setStatus("error"); setErrMsg("Password must be at least 8 characters"); return; }
+    try {
+      const r = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: apiHeaders(token),
+        body: JSON.stringify({ currentPassword: form.current, newPassword: form.next }),
+      });
+      const data = await r.json() as { success?: boolean; error?: string };
+      if (!r.ok) { setStatus("error"); setErrMsg(data.error ?? "Failed to change password"); return; }
+      setStatus("success");
+      setForm({ current: "", next: "", confirm: "" });
+      setTimeout(() => setStatus("idle"), 4000);
+    } catch {
+      setStatus("error");
+      setErrMsg("Something went wrong. Please try again.");
+    }
+  }
+
+  function PwInput({ field, label }: { field: keyof typeof form; label: string }) {
+    return (
+      <div>
+        <label className="text-sm font-medium text-foreground block mb-1.5">{label}</label>
+        <div className="relative">
+          <input
+            type={show[field] ? "text" : "password"}
+            value={form[field]}
+            onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
+            className={inputCls}
+            required
+          />
+          <button type="button" onClick={() => setShow(s => ({ ...s, [field]: !s[field] }))}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            {show[field] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <h3 className="font-bold text-foreground mb-4">Security Settings</h3>
+    <div className="space-y-6">
+      <h3 className="font-bold text-foreground">Security Settings</h3>
+
+      {/* Change Password */}
+      <div className="rounded-xl border border-border p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <KeyRound className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm font-semibold text-foreground">Change Password</p>
+        </div>
+
+        {status === "success" && (
+          <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
+            <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+            <p className="text-sm text-emerald-700 font-medium">Password changed successfully.</p>
+          </div>
+        )}
+        {status === "error" && (
+          <div className="flex items-center gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
+            <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+            <p className="text-sm text-destructive">{errMsg}</p>
+          </div>
+        )}
+
+        <form onSubmit={changePassword} className="space-y-3">
+          <PwInput field="current" label="Current Password" />
+          <PwInput field="next" label="New Password" />
+          <PwInput field="confirm" label="Confirm New Password" />
+          <button type="submit"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:opacity-90 transition-all"
+            style={{ background: LIME }}>
+            <KeyRound className="h-4 w-4" />
+            Update Password
+          </button>
+        </form>
+      </div>
+
+      {/* Security Toggles */}
       <div className="space-y-3">
-        {ITEMS.map((item, idx) => (
+        {TOGGLES.map((item, idx) => (
           <div key={item.label} className="flex items-center justify-between rounded-xl border border-border p-4">
             <div>
               <p className="text-sm font-medium text-foreground">{item.label}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
             </div>
-            <Toggle enabled={enabled[idx]} onToggle={() => toggle(idx)} />
+            <Toggle enabled={enabled[idx]} onToggle={() => setEnabled(prev => prev.map((v, i) => i === idx ? !v : v))} />
           </div>
         ))}
       </div>

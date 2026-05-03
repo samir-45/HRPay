@@ -186,6 +186,13 @@ router.post("/companies/invite", async (req, res) => {
     token, tempPassword, status: "pending", invitedBy: user.id, expiresAt,
   }).returning();
 
+  // Auto-create the user account immediately so they can log in with the temp password right away
+  // without needing to visit an accept-invite URL first.
+  const passwordHash = await bcrypt.hash(tempPassword, 10);
+  await db.insert(usersTable).values({
+    email: email.toLowerCase(), passwordHash, name, role, companyId: user.companyId,
+  }).catch(() => { /* user might already exist — login will still work */ });
+
   // Send email asynchronously — never block the response on it
   const [company] = await db.select({ name: companiesTable.name }).from(companiesTable).where(eq(companiesTable.id, user.companyId));
   const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",");
@@ -230,15 +237,25 @@ router.post("/auth/accept-invite", async (req, res) => {
 
   const [invite] = await db.select().from(invitationsTable).where(eq(invitationsTable.token, token));
   if (!invite) { res.status(404).json({ error: "Invitation not found" }); return; }
-  if (invite.status !== "pending") { res.status(400).json({ error: "Invitation already used or expired" }); return; }
-  if (new Date() > invite.expiresAt) {
+  if (new Date() > invite.expiresAt && invite.status === "pending") {
     await db.update(invitationsTable).set({ status: "expired" }).where(eq(invitationsTable.id, invite.id));
     res.status(400).json({ error: "Invitation expired" }); return;
   }
 
   const [existingUser] = await db.select().from(usersTable).where(eq(usersTable.email, invite.email));
-  if (existingUser) { res.status(409).json({ error: "User already exists" }); return; }
 
+  // If user already exists (pre-created at invite time), just log them in
+  if (existingUser) {
+    await db.update(invitationsTable).set({ status: "accepted", acceptedAt: new Date() }).where(eq(invitationsTable.id, invite.id));
+    const jwtToken = jwt.sign(
+      { id: existingUser.id, email: existingUser.email, name: existingUser.name, role: existingUser.role, companyId: existingUser.companyId },
+      JWT_SECRET, { expiresIn: "7d" }
+    );
+    res.json({ token: jwtToken, user: { id: existingUser.id, email: existingUser.email, name: existingUser.name, role: existingUser.role, companyId: existingUser.companyId } });
+    return;
+  }
+
+  // Fallback: create user if not yet pre-created
   const passwordHash = await bcrypt.hash(invite.tempPassword!, 10);
   const [newUser] = await db.insert(usersTable).values({
     email: invite.email, passwordHash, name: invite.name,
