@@ -332,7 +332,7 @@ export default function Time() {
 
   /* Mutations */
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["time", "entries"] });
+    qc.invalidateQueries({ queryKey: ["/api/time/entries"] });
   };
 
   const approveMut = useApproveTimeEntry({
