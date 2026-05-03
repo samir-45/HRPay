@@ -2,9 +2,10 @@ import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, apiHeaders } from "@/components/auth-context";
 import { SkeletonSettingsForm } from "@/components/skeletons";
+import { toast } from "@/components/ui/sonner";
 import {
   Building2, CreditCard, Globe, Shield, Bell, Save,
-  KeyRound, Eye, EyeOff, CheckCircle, AlertCircle, User, Camera, MapPin,
+  KeyRound, Eye, EyeOff, User, Camera, MapPin,
 } from "lucide-react";
 
 const API = "/api";
@@ -90,7 +91,6 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
 function ProfileTab() {
   const { token } = useAuth();
   const qc = useQueryClient();
-  const [saved, setSaved] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,17 +104,28 @@ function ProfileTab() {
   const set = (k: keyof EmployeeProfile) => (v: string) => setForm(p => ({ ...p, [k]: v }));
 
   const save = useMutation({
-    mutationFn: () =>
-      fetch(`${API}/employees/me`, {
+    mutationFn: async () => {
+      const r = await fetch(`${API}/employees/me`, {
         method: "PATCH",
         headers: apiHeaders(token),
         body: JSON.stringify(form),
-      }).then(r => r.json()),
+      });
+      const data = await r.json() as Record<string, unknown>;
+      if (!r.ok) throw new Error((data.error as string) ?? "Failed to save");
+      return data;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      setSaved(true);
       setForm({});
-      setTimeout(() => setSaved(false), 3000);
+      toast.success("Profile updated", {
+        description: "Your changes have been saved successfully.",
+        icon: "✅",
+      });
+    },
+    onError: (err: Error) => {
+      toast.error("Failed to update profile", {
+        description: err.message,
+      });
     },
   });
 
@@ -249,13 +260,8 @@ function ProfileTab() {
           style={{ background: LIME }}
         >
           <Save className="h-4 w-4" />
-          {save.isPending ? "Saving…" : saved ? "Saved!" : "Save Changes"}
+          {save.isPending ? "Saving…" : "Save Changes"}
         </button>
-        {saved && (
-          <div className="flex items-center gap-1.5 text-sm text-emerald-600">
-            <CheckCircle className="h-4 w-4" /> Profile updated successfully
-          </div>
-        )}
       </div>
     </div>
   );
@@ -266,30 +272,32 @@ function SecurityTab() {
   const { token } = useAuth();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [show, setShow] = useState({ current: false, next: false, confirm: false });
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [errMsg, setErrMsg] = useState("");
+  const [pending, setPending] = useState(false);
 
   const TOGGLES = [
-    { label: "Session Timeout",       desc: "Automatically log out inactive users after 30 minutes",              defaultEnabled: true },
-    { label: "Login Attempt Lockout", desc: "Lock accounts after 5 consecutive failed login attempts",             defaultEnabled: true },
-    { label: "Audit All Actions",     desc: "Log every create, update, and delete action with user context",      defaultEnabled: true },
+    { label: "Session Timeout",       desc: "Automatically log out inactive users after 30 minutes",         defaultEnabled: true },
+    { label: "Login Attempt Lockout", desc: "Lock accounts after 5 consecutive failed login attempts",        defaultEnabled: true },
+    { label: "Audit All Actions",     desc: "Log every create, update, and delete action with user context", defaultEnabled: true },
   ];
   const [enabled, setEnabled] = useState<boolean[]>(TOGGLES.map(i => i.defaultEnabled));
   const inputCls = "w-full rounded-xl border border-border bg-muted/30 px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 transition-all pr-10";
 
   async function changePassword(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("idle"); setErrMsg("");
-    if (form.next !== form.confirm) { setStatus("error"); setErrMsg("New passwords do not match"); return; }
-    if (form.next.length < 8)       { setStatus("error"); setErrMsg("Password must be at least 8 characters"); return; }
+    if (form.next !== form.confirm) { toast.error("Passwords don't match", { description: "New password and confirmation must be identical." }); return; }
+    if (form.next.length < 8)       { toast.error("Password too short",    { description: "Password must be at least 8 characters." }); return; }
+    setPending(true);
     try {
       const r = await fetch(`${API}/auth/change-password`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify({ currentPassword: form.current, newPassword: form.next }) });
       const data = await r.json() as { success?: boolean; error?: string };
-      if (!r.ok) { setStatus("error"); setErrMsg(data.error ?? "Failed to change password"); return; }
-      setStatus("success");
+      if (!r.ok) { toast.error("Failed to change password", { description: data.error ?? "Please check your current password and try again." }); return; }
+      toast.success("Password changed", { description: "Your password has been updated successfully." });
       setForm({ current: "", next: "", confirm: "" });
-      setTimeout(() => setStatus("idle"), 4000);
-    } catch { setStatus("error"); setErrMsg("Something went wrong. Please try again."); }
+    } catch {
+      toast.error("Something went wrong", { description: "Please try again in a moment." });
+    } finally {
+      setPending(false);
+    }
   }
 
   function PwInput({ field, label }: { field: keyof typeof form; label: string }) {
@@ -311,22 +319,12 @@ function SecurityTab() {
       <h3 className="font-bold text-foreground">Security Settings</h3>
       <div className="rounded-xl border border-border p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1"><KeyRound className="h-4 w-4 text-muted-foreground" /><p className="text-sm font-semibold text-foreground">Change Password</p></div>
-        {status === "success" && (
-          <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
-            <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" /><p className="text-sm text-emerald-700 font-medium">Password changed successfully.</p>
-          </div>
-        )}
-        {status === "error" && (
-          <div className="flex items-center gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3">
-            <AlertCircle className="h-4 w-4 text-destructive shrink-0" /><p className="text-sm text-destructive">{errMsg}</p>
-          </div>
-        )}
         <form onSubmit={changePassword} className="space-y-3">
           <PwInput field="current" label="Current Password" />
           <PwInput field="next"    label="New Password" />
           <PwInput field="confirm" label="Confirm New Password" />
-          <button type="submit" className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:opacity-90 transition-all" style={{ background: LIME }}>
-            <KeyRound className="h-4 w-4" /> Update Password
+          <button type="submit" disabled={pending} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:opacity-90 disabled:opacity-50 transition-all" style={{ background: LIME }}>
+            <KeyRound className="h-4 w-4" /> {pending ? "Updating…" : "Update Password"}
           </button>
         </form>
       </div>
