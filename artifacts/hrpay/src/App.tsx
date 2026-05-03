@@ -37,6 +37,7 @@ import Training from "@/pages/training";
 import OrgChart from "@/pages/org-chart";
 import Permissions from "@/pages/permissions";
 import Upgrade from "@/pages/upgrade";
+import Help from "@/pages/help";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -114,6 +115,7 @@ function Router() {
       <Route path="/assets"         component={() => <ProtectedRoute component={Assets} />} />
       <Route path="/training"       component={() => <ProtectedRoute component={Training} />} />
       <Route path="/org-chart"      component={() => <ProtectedRoute component={OrgChart} />} />
+      <Route path="/help"           component={() => <ProtectedRoute component={Help} />} />
       <Route component={NotFound} />
     </Switch>
   );

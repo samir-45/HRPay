@@ -7,7 +7,7 @@ import {
   Target, FileText, Settings, Megaphone,
   Receipt, Package, GraduationCap, Network,
   CheckCheck, Info, AlertCircle, PartyPopper,
-  UserCog, LockKeyhole, BarChart3,
+  UserCog, LockKeyhole, BarChart3, HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, apiHeaders } from "@/components/auth-context";
@@ -252,6 +252,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           )}
 
           <div className="flex-1" />
+
+          <Link href="/help"
+            className={cn(
+              "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-all",
+              location === "/help" ? "bg-foreground text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}>
+            <HelpCircle className={cn("h-3.5 w-3.5 shrink-0", location === "/help" ? "text-white" : "text-muted-foreground")} />
+            Help Center
+          </Link>
 
           <button onClick={logout}
             className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all w-full text-left">
