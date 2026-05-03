@@ -1,6 +1,9 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { pool } from "@workspace/db";
+import { pool, db } from "@workspace/db";
+import { companiesTable, companyInsightsTable } from "@workspace/db";
+import cron from "node-cron";
+import { generateInsights, getWeekMonday } from "./routes/insights";
 
 const rawPort = process.env["PORT"];
 
@@ -38,6 +41,40 @@ async function shutdown(signal: string) {
     process.exit(1);
   }, 10_000).unref();
 }
+
+/* ── Weekly AI Insights Scheduler (every Monday at 9:00 AM UTC) ── */
+cron.schedule("0 9 * * 1", async () => {
+  logger.info("Running weekly AI insights generation");
+  try {
+    const companies = await db
+      .select({ id: companiesTable.id, name: companiesTable.name, settings: companiesTable.settings })
+      .from(companiesTable);
+
+    const weekOf = getWeekMonday();
+
+    for (const company of companies) {
+      try {
+        const settings = (company.settings ?? {}) as Record<string, unknown>;
+        if (settings.aiInsightsEnabled === false) continue;
+
+        const payload = await generateInsights(company.id, company.name);
+        await db.insert(companyInsightsTable).values({
+          companyId: company.id,
+          weekOf,
+          summary: payload.summary,
+          score: payload.score,
+          insights: payload.insights,
+          status: "completed",
+        });
+        logger.info({ companyId: company.id }, "Weekly insights generated");
+      } catch (err) {
+        logger.error({ err, companyId: company.id }, "Failed to generate insights for company");
+      }
+    }
+  } catch (err) {
+    logger.error({ err }, "Weekly insights scheduler error");
+  }
+});
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT",  () => shutdown("SIGINT"));

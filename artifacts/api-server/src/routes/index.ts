@@ -19,6 +19,7 @@ import aiRouter from "./ai";
 import expensesRouter from "./expenses";
 import assetsRouter from "./assets";
 import trainingRouter from "./training";
+import insightsRouter from "./insights";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(aiRouter);
 router.use(expensesRouter);
 router.use(assetsRouter);
 router.use(trainingRouter);
+router.use(insightsRouter);
 
 export default router;

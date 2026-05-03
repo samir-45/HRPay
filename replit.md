@@ -77,7 +77,8 @@ Date formats: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, DD.MM.YYYY
 
 ## Database Schema (PostgreSQL via Drizzle ORM)
 
-- `companies` — org profile, plan, `settings` JSONB (currency, timezone, dateFormat, etc.), `feature_permissions` JSONB
+- `companies` — org profile, plan, `settings` JSONB (currency, timezone, dateFormat, `aiInsightsEnabled`, etc.), `feature_permissions` JSONB
+- `company_insights` — AI-generated weekly HR insight reports; columns: `id, company_id, week_of, summary, score, insights JSONB, status, generated_at`
 - `departments` — org structure, budget, manager; has `company_id`
 - `employees` — full profile, compensation, employment status; has `company_id`, `employee_code` (EMP-XXXXXX)
 - `payroll_runs` — bi-weekly runs with status lifecycle (draft → completed); has `company_id`
@@ -127,6 +128,7 @@ Date formats: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, DD.MM.YYYY
 | `/reports` | Headcount, payroll summary, leave, attendance reports |
 | `/settings` | Company settings (DB-persisted), locale, payroll config, security, notifications |
 | `/permissions` | Role-based feature permission matrix |
+| `/insights` | AI-powered weekly HR insights (company_admin only) |
 | `/team` | Team management — invite, role assignment |
 | `/super-admin` | Platform-level company, subscription, user management |
 
@@ -146,6 +148,17 @@ The `lib/api-spec/package.json` codegen script patches `lib/api-zod/src/index.ts
 ```
 orval --config ./orval.config.ts && echo 'export * from "./generated/api";' > ../api-zod/src/index.ts && pnpm -w run typecheck:libs
 ```
+
+## AI Weekly Insights
+
+- **Library**: `@workspace/integrations-openai-ai-server` (Replit AI Integrations OpenAI proxy)
+- **Env vars**: `AI_INTEGRATIONS_OPENAI_BASE_URL`, `AI_INTEGRATIONS_OPENAI_API_KEY` (provisioned via Replit AI Integrations)
+- **Routes**: `GET /api/insights`, `POST /api/insights/generate`, `GET /api/insights/:id/poll`, `PATCH /api/insights/settings`
+- **Scheduler**: `node-cron` runs every Monday at 09:00 UTC, generates for all companies with `aiInsightsEnabled !== false`
+- **Toggle**: stored in `companies.settings.aiInsightsEnabled` JSONB boolean
+- **Data gathered**: employees, payroll runs, leave requests, expenses, time entries, onboarding tasks, performance reviews
+- **GPT response**: `{ summary, score (0-100), insights: [{ category, status, title, detail, recommendation, metric }] }`
+- **Frontend**: `/insights` (company_admin only), sidebar "AI Insights" nav with Sparkles icon
 
 ## Notes for Future Development
 

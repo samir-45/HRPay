@@ -14,3 +14,4 @@ export * from "./announcements";
 export * from "./expenses";
 export * from "./assets";
 export * from "./training";
+export * from "./insights";

@@ -7,7 +7,7 @@ import {
   Target, FileText, Settings, Megaphone,
   Receipt, Package, GraduationCap, Network,
   CheckCheck, Info, AlertCircle, PartyPopper,
-  UserCog, LockKeyhole, BarChart3, HelpCircle, Menu, X as XClose,
+  UserCog, LockKeyhole, BarChart3, HelpCircle, Menu, X as XClose, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, apiHeaders } from "@/components/auth-context";
@@ -29,6 +29,7 @@ type NavItem = {
 const baseNavigation: NavItem[] = [
   { name: "Dashboard",         href: "/dashboard",     icon: LayoutDashboard, roles: null,                feature: null },
   { name: "Permissions",       href: "/permissions",   icon: LockKeyhole,     roles: ["company_admin"],   feature: null },
+  { name: "AI Insights",       href: "/insights",      icon: Sparkles,        roles: ["company_admin"],   feature: null },
   { name: "Team",              href: "/team",          icon: UserCog,         roles: MANAGER_ROLES,       feature: "team" },
   { name: "Employees",         href: "/employees",     icon: Users,           roles: ADMIN_ROLES,         feature: "employees" },
   { name: "Payroll",           href: "/payroll",       icon: Calculator,      roles: ADMIN_ROLES,         feature: "payroll" },

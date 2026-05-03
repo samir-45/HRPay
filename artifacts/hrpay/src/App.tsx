@@ -39,6 +39,7 @@ import Assets from "@/pages/assets";
 import Training from "@/pages/training";
 import OrgChart from "@/pages/org-chart";
 import Permissions from "@/pages/permissions";
+import Insights from "@/pages/insights";
 import Upgrade from "@/pages/upgrade";
 import Help from "@/pages/help";
 
@@ -115,6 +116,7 @@ function Router() {
       <Route path="/help"        component={() => <ProtectedRoute component={Help} />} />
 
       <Route path="/permissions" component={() => <ProtectedRoute component={Permissions} allowedRoles={["company_admin"]} />} />
+      <Route path="/insights"    component={() => <ProtectedRoute component={Insights}    allowedRoles={["company_admin"]} />} />
       <Route path="/team"        component={() => <ProtectedRoute component={TeamManagement} allowedRoles={["company_admin", "ceoo", "super_admin", "manager"]} feature="team" />} />
 
       <Route path="/employees/new"  component={() => <ProtectedRoute component={EmployeeNew}     feature="employees" />} />
