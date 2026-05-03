@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 export interface AuthUser {
   id: number;
@@ -25,6 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("hrpay_token"));
   const [isLoading, setIsLoading] = useState(true);
+
+  // Set auth token getter for API client
+  useEffect(() => {
+    setAuthTokenGetter(() => token);
+  }, [token]);
 
   const logout = useCallback(() => {
     setUser(null);
