@@ -56,6 +56,8 @@ router.get("/time/entries", async (req, res) => {
   if (q.endDate) conditions.push(lte(timeEntriesTable.date, q.endDate));
   // Note: company scoping is handled via the joinCondition above (INNER JOIN with company filter)
 
+  console.log(`[time/entries] Building query with ${conditions.length} conditions: employeeId=${effectiveEmployeeId}, status=${q.status}, dates=${q.startDate} to ${q.endDate}`);
+
   const entries = await db
     .select({
       id: timeEntriesTable.id,
@@ -76,6 +78,8 @@ router.get("/time/entries", async (req, res) => {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(timeEntriesTable.date), desc(timeEntriesTable.createdAt))
     .limit(limit);
+
+  console.log(`[time/entries] Query returned ${entries.length} entries`);
 
   res.json(
     entries.map((e) => ({
