@@ -1,8 +1,8 @@
-import express, { type Request, type Response, type NextFunction } from "express";
+import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import pinoHttp from "pino-http";
+import { pinoHttp } from "pino-http";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
 
@@ -36,7 +36,7 @@ const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
-  skip: (req) => req.originalUrl === "/api/healthz",
+  skip: (req: any) => req.originalUrl === "/api/healthz" || req.url === "/api/healthz",
 });
 
 const authLimiter = rateLimit({
@@ -57,10 +57,10 @@ app.use(
   pinoHttp({
     logger,
     serializers: {
-      req(req) {
+      req(req: any) {
         return { id: req.id, method: req.method, url: req.url?.split("?")[0] };
       },
-      res(res) {
+      res(res: any) {
         return { statusCode: res.statusCode };
       },
     },
@@ -75,13 +75,13 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use("/api", router);
 
 /* ── 404 handler ── */
-app.use((_req: Request, res: Response) => {
+app.use((_req: any, res: any) => {
   res.status(404).json({ error: "Not found" });
 });
 
 /* ── Global error handler ── */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, _req: any, res: any, _next: any) => {
   logger.error({ err }, "Unhandled error");
   const status = (err as { status?: number }).status ?? 500;
   const message = process.env["NODE_ENV"] === "production" ? "Internal server error" : err.message;
