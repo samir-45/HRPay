@@ -352,8 +352,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-5">
-          <div className="mx-auto max-w-7xl">{children}</div>
+        <main className={cn("flex-1 overflow-y-auto", location === "/help" ? "bg-white" : "p-5")}>
+          <div className={cn("mx-auto", location !== "/help" && "max-w-7xl")}>{children}</div>
         </main>
       </div>
     </div>
