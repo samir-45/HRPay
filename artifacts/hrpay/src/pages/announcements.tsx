@@ -9,7 +9,7 @@ import { Megaphone, Plus, X, Pin, Trash2 } from "lucide-react";
 const API = "/api";
 const LIME = "hsl(82 80% 48%)";
 
-interface Announcement { id: number; title: string; content: string; type: string; target: string; isPinned: boolean; publishedBy?: string; createdAt: string; }
+interface Announcement { id: number; companyId: number | null; title: string; content: string; type: string; target: string; isPinned: boolean; publishedBy?: string; createdAt: string; }
 
 export default function Announcements() {
   const { token, user } = useAuth();
@@ -226,7 +226,7 @@ function AnnouncementCard({ a, canPublish, onRemove, onPin }: { a: Announcement;
             <span>{new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
           </div>
         </div>
-        {canPublish && (
+        {canPublish && (user?.role === "super_admin" || a.companyId === user?.companyId) && (
           <div className="flex gap-1">
             <button onClick={onPin} className={`flex size-8 items-center justify-center rounded-lg transition-colors ${a.isPinned ? "text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`} style={a.isPinned ? { background: LIME } : {}}>
               <Pin className="h-3.5 w-3.5" />

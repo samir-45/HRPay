@@ -73,7 +73,11 @@ router.delete("/announcements/:id", async (req, res) => {
   const conditions = [eq(announcementsTable.id, Number(req.params["id"]))];
   if (user.companyId) conditions.push(eq(announcementsTable.companyId, user.companyId));
 
-  await db.delete(announcementsTable).where(and(...conditions));
+  const result = await db.delete(announcementsTable).where(and(...conditions)).returning({ id: announcementsTable.id });
+  if (result.length === 0) {
+    res.status(404).json({ error: "Announcement not found or permission denied" });
+    return;
+  }
   res.status(204).send();
 });
 
