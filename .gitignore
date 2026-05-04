@@ -16,8 +16,10 @@ node_modules/
 # Build Outputs
 dist/
 build/
-public/
-artifacts/api-server/public/
+/public/
+!artifacts/api-server/public/
+artifacts/api-server/public/*
+!artifacts/api-server/public/index.html
 *.tsbuildinfo
 
 # IDE/System

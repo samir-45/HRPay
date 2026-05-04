@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { cp, rm } from "node:fs/promises";
+import { access, cp, rm } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -35,7 +35,9 @@ function runPnpm(args) {
 
 async function copyFrontendToPublic() {
   const frontendDist = path.join(workspaceRoot, "artifacts", "hrpay", "dist", "public");
-  const publicDirs = [path.join(workspaceRoot, "public"), path.join(artifactDir, "public")];
+  const publicDirs = Array.from(
+    new Set([path.join(workspaceRoot, "public"), path.join(artifactDir, "public"), path.resolve("public")]),
+  );
 
   await Promise.all(
     publicDirs.map(async (publicDir) => {
@@ -43,6 +45,12 @@ async function copyFrontendToPublic() {
       await cp(frontendDist, publicDir, { recursive: true });
     }),
   );
+
+  for (const publicDir of publicDirs) {
+    const indexPath = path.join(publicDir, "index.html");
+    await access(indexPath);
+    console.log(`Vercel public fallback ready: ${indexPath}`);
+  }
 }
 
 async function buildAll() {

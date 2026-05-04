@@ -1,4 +1,4 @@
-import { cp, rm } from "node:fs/promises";
+import { access, cp, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
@@ -40,6 +40,12 @@ async function copyFrontendToPublic() {
       await cp(frontendDist, publicDir, { recursive: true });
     }),
   );
+
+  for (const publicDir of publicDirs) {
+    const indexPath = path.join(publicDir, "index.html");
+    await access(indexPath);
+    console.log(`Vercel public fallback ready: ${indexPath}`);
+  }
 }
 
 await run(["run", "typecheck"]);
