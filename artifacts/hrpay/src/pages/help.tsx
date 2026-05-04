@@ -636,7 +636,7 @@ export default function Help() {
   const isSearching = search.trim() !== "";
 
   return (
-    <div className="flex gap-0 -m-5" style={{ height: "calc(100vh - 3.5rem)" }}>
+    <div className="flex gap-0 border border-border rounded-2xl bg-white overflow-hidden shadow-sm" style={{ height: "calc(100vh - 8.5rem)" }}>
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
