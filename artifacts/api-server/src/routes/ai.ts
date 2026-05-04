@@ -1,16 +1,20 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { employeesTable, leaveRequestsTable, payrollRunsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { db, employeesTable, leaveRequestsTable, payrollRunsTable, departmentsTable, onboardingTasksTable } from "@workspace/db";
+import { getRequestUser } from "../lib/auth-helpers";
+import { count, and, eq, desc } from "drizzle-orm";
 
 const router = Router();
 
 const SYSTEM_PROMPT = `You are an expert HR & Payroll assistant for HRPay — an enterprise HR management platform. 
 You have deep knowledge of HR best practices, payroll processing, labor law, performance management, and employee relations.
 You are helpful, concise, and professional. When given context data about the company, use it to give specific, data-driven answers.
-If you don't know something, say so clearly. Never make up specific numbers or data not provided.`;
+If you don't know something, say so clearly. Never make up specific numbers or data not provided.
+Address the user as a manager/admin of their specific company.`;
 
 router.post("/ai/chat", async (req, res) => {
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+
   const { message, page, contextData } = req.body as {
     message: string;
     page?: string;
@@ -19,16 +23,38 @@ router.post("/ai/chat", async (req, res) => {
 
   if (!message) { res.status(400).json({ error: "Message required" }); return; }
 
-  /* Build context from DB */
-  const [empCount] = await db.select({ count: employeesTable.id }).from(employeesTable).limit(1);
-  const pendingLeave = await db.select().from(leaveRequestsTable).where(eq(leaveRequestsTable.status, "pending"));
-  const recentPayroll = await db.select().from(payrollRunsTable).orderBy(desc(payrollRunsTable.createdAt)).limit(3);
+  const cid = user.companyId;
+
+  /* Build company-specific context from DB */
+  const [empRes] = await db.select({ count: count() }).from(employeesTable).where(eq(employeesTable.companyId, cid!));
+  const depts = await db.select().from(departmentsTable).where(eq(departmentsTable.companyId, cid!));
+  
+  const pendingLeave = await db
+    .select()
+    .from(leaveRequestsTable)
+    .leftJoin(employeesTable, eq(leaveRequestsTable.employeeId, employeesTable.id))
+    .where(and(eq(leaveRequestsTable.status, "pending"), eq(employeesTable.companyId, cid!)));
+
+  const recentPayroll = await db
+    .select()
+    .from(payrollRunsTable)
+    .where(eq(payrollRunsTable.companyId, cid!))
+    .orderBy(desc(payrollRunsTable.createdAt))
+    .limit(3);
+
+  const [onboardingRes] = await db
+    .select({ count: count() })
+    .from(onboardingTasksTable)
+    .leftJoin(employeesTable, eq(onboardingTasksTable.employeeId, employeesTable.id))
+    .where(and(eq(onboardingTasksTable.isCompleted, false), eq(employeesTable.companyId, cid!)));
 
   const dbContext = `
-Current HR Data Snapshot:
-- Active employees on system: see employee records
+Current HR Data Snapshot for Company:
+- Total Employees: ${empRes.count}
+- Departments: ${depts.map(d => d.name).join(", ")}
 - Pending leave requests: ${pendingLeave.length}
-- Recent payroll runs: ${recentPayroll.map(r => `${r.periodStart} (${r.status}, gross: $${r.totalGrossPay})`).join(", ")}
+- Recent payroll runs: ${recentPayroll.map(r => `${r.name}: ${r.periodStart} (${r.status}, gross: $${r.totalGrossPay})`).join(", ")}
+- Onboarding tasks in progress: ${onboardingRes.count}
 - Current page: ${page ?? "unknown"}
 ${contextData ? `\nPage context: ${JSON.stringify(contextData)}` : ""}`;
 
