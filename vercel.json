@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "artifacts/hrpay/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist/public" }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "api/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "artifacts/hrpay/$1",
+      "check": true
+    },
+    {
+      "src": "/(.*)",
+      "dest": "artifacts/hrpay/index.html"
+    }
+  ]
+}

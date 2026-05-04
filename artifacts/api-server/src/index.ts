@@ -1,3 +1,4 @@
+import "dotenv/config";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { pool, db } from "@workspace/db";
@@ -5,10 +6,10 @@ import { companiesTable, companyInsightsTable } from "@workspace/db";
 import cron from "node-cron";
 import { generateInsights, getWeekMonday } from "./routes/insights";
 
-const rawPort = process.env["PORT"];
+const rawPort = process.env["BACKEND_PORT"] || "8080";
 
 if (!rawPort) {
-  throw new Error("PORT environment variable is required but was not provided.");
+  throw new Error("BACKEND_PORT environment variable is required but was not provided.");
 }
 
 const port = Number(rawPort);
@@ -88,3 +89,5 @@ process.on("unhandledRejection", (reason) => {
   logger.fatal({ reason }, "Unhandled rejection — shutting down");
   process.exit(1);
 });
+
+export default app;

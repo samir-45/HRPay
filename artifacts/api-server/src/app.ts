@@ -3,30 +3,26 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
-import router from "./routes";
-import { logger } from "./lib/logger";
+import router from "./routes/index.js";
+import { logger } from "./lib/logger.js";
 
 const app: Express = express();
 
-/* ── Trusted proxy (Replit runs behind a reverse proxy) ── */
+/* ── Trusted proxy ── */
 app.set("trust proxy", 1);
 
 /* ── Security Headers ── */
 app.use(
   helmet({
-    contentSecurityPolicy: false, // API-only; CSP managed by the frontend
+    contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
 /* ── CORS ── */
-const ALLOWED_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$|\.replit\.dev$|\.repl\.co$/;
 app.use(
   cors({
-    origin: (origin, cb) => {
-      if (!origin || ALLOWED_ORIGIN_RE.test(origin)) return cb(null, true);
-      cb(new Error("CORS: origin not allowed"));
-    },
+    origin: true, // Allow all origins for now to fix the Vercel issue
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

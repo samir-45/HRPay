@@ -2,7 +2,11 @@ import { db } from "@workspace/db";
 import {
   usersTable, announcementsTable, jobPostingsTable,
   applicationsTable, goalsTable, performanceReviewsTable,
-  departmentsTable, employeesTable,
+  departmentsTable, employeesTable, companiesTable,
+  payrollRunsTable, leaveRequestsTable, timeEntriesTable,
+  expenseClaimsTable, coursesTable, enrollmentsTable,
+  assetsTable, onboardingTasksTable, benefitPlansTable,
+  benefitEnrollmentsTable
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -11,6 +15,25 @@ const COMPANY_ID = 1;
 
 async function main() {
   console.log("Seeding new modules...");
+
+  /* Ensure company exists */
+  const [existingCompany] = await db.select().from(companiesTable).where(eq(companiesTable.id, COMPANY_ID));
+  if (!existingCompany) {
+    await db.insert(companiesTable).values({
+      id: COMPANY_ID,
+      name: "Test Corp",
+      slug: "test-corp",
+      plan: "pro",
+      domain: "testcorp.com",
+      settings: {
+        currency: "USD",
+        timezone: "UTC",
+        dateFormat: "MM/DD/YYYY",
+        aiInsightsEnabled: true
+      }
+    }).onConflictDoNothing();
+    console.log("✓ Default company created");
+  }
 
   /* Super admin user */
   const hash = await bcrypt.hash("Admin@123", 10);
@@ -22,6 +45,28 @@ async function main() {
     isActive: true,
   }).onConflictDoNothing();
   console.log("✓ Super admin user seeded");
+
+  /* Company Admin user */
+  await db.insert(usersTable).values({
+    email: "john@testcorp.com",
+    passwordHash: hash,
+    name: "John Admin",
+    role: "company_admin",
+    companyId: COMPANY_ID,
+    isActive: true,
+  }).onConflictDoNothing();
+  console.log("✓ Company admin user seeded");
+
+  /* Test Employee user */
+  await db.insert(usersTable).values({
+    email: "samtsan6@gmail.com",
+    passwordHash: hash,
+    name: "Sam Employee",
+    role: "employee",
+    companyId: COMPANY_ID,
+    isActive: true,
+  }).onConflictDoNothing();
+  console.log("✓ Test employee seeded");
 
   /* Announcements — null companyId = global (visible to all companies) */
   await db.insert(announcementsTable).values([
@@ -84,67 +129,136 @@ async function main() {
   }
   console.log("✓ Jobs & applications seeded");
 
-  /* Goals — look up real employee IDs from this company */
-  const employees = await db.select({ id: employeesTable.id })
-    .from(employeesTable)
-    .where(eq(employeesTable.companyId, COMPANY_ID))
-    .limit(6);
+  /* Create Employees */
+  console.log("Seeding employees...");
+  const employeesData = [
+    { name: "John Admin", email: "john@testcorp.com", code: "EMP-000001", role: "Manager", dept: "HR & People", salary: "95000" },
+    { name: "Sam Employee", email: "samtsan6@gmail.com", code: "EMP-000002", role: "Software Engineer", dept: "Engineering", salary: "85000" },
+    { name: "Alice Smith", email: "alice@testcorp.com", code: "EMP-000003", role: "Senior Developer", dept: "Engineering", salary: "120000" },
+    { name: "Bob Wilson", email: "bob@testcorp.com", code: "EMP-000004", role: "Product Designer", dept: "Product", salary: "90000" },
+    { name: "Charlie Davis", email: "charlie@testcorp.com", code: "EMP-000005", role: "Sales Executive", dept: "Sales", salary: "75000" },
+    { name: "Diana Prince", email: "diana@testcorp.com", code: "EMP-000006", role: "Marketing Manager", dept: "Marketing", salary: "110000" },
+    { name: "Edward Norton", email: "edward@testcorp.com", code: "EMP-000007", role: "Finance Analyst", dept: "Finance", salary: "88000" },
+    { name: "Fiona Gallagher", email: "fiona@testcorp.com", code: "EMP-000008", role: "Operations Lead", dept: "Operations", salary: "92000" },
+  ];
 
-  if (employees.length >= 1) {
-    await db.insert(goalsTable).values([
-      { employeeId: employees[0].id, title: "Launch microservices migration", description: "Break monolith into 5 core microservices by Q3", category: "team", target: "5 services in production", progress: 65, status: "active", dueDate: "2026-09-30", cycle: "Q2-Q3 2026" },
-      { employeeId: employees[0].id, title: "Reduce API response time", description: "Achieve p99 < 100ms across all endpoints", category: "individual", target: "p99 < 100ms", progress: 80, status: "active", dueDate: "2026-06-30", cycle: "Q2 2026" },
-    ]).onConflictDoNothing();
+  for (const emp of employeesData) {
+    await db.insert(employeesTable).values({
+      companyId: COMPANY_ID,
+      departmentId: deptMap.get(emp.dept) ?? engId,
+      firstName: emp.name.split(" ")[0],
+      lastName: emp.name.split(" ")[1],
+      email: emp.email,
+      employeeCode: emp.code,
+      position: emp.role,
+      salary: emp.salary,
+      status: "active",
+      employmentType: "full_time",
+      startDate: "2024-01-15",
+    }).onConflictDoNothing();
   }
-  if (employees.length >= 2) {
-    await db.insert(goalsTable).values([
-      { employeeId: employees[1].id, title: "Ship v2.0 product roadmap", description: "Deliver 3 major features by end of quarter", category: "individual", target: "3 features shipped", progress: 40, status: "active", dueDate: "2026-06-30", cycle: "Q2 2026" },
-    ]).onConflictDoNothing();
-  }
-  if (employees.length >= 3) {
-    await db.insert(goalsTable).values([
-      { employeeId: employees[2].id, title: "Reduce time-to-hire to 21 days", description: "Optimize recruitment funnel across all open roles", category: "team", target: "21 day average TTH", progress: 55, status: "active", dueDate: "2026-07-31", cycle: "Q2-Q3 2026" },
-    ]).onConflictDoNothing();
-  }
-  if (employees.length >= 4) {
-    await db.insert(goalsTable).values([
-      { employeeId: employees[3].id, title: "Complete AWS Solutions Architect certification", description: "Study and pass the AWS SAA exam", category: "individual", target: "Pass exam", progress: 100, status: "completed", dueDate: "2026-04-30", cycle: "Q1 2026" },
-    ]).onConflictDoNothing();
-  }
-  if (employees.length >= 5) {
-    await db.insert(goalsTable).values([
-      { employeeId: employees[4].id, title: "Improve sales pipeline by 30%", description: "Expand outreach and conversion initiatives", category: "individual", target: "+30% MRR from new deals", progress: 25, status: "active", dueDate: "2026-09-30", cycle: "Q2-Q3 2026" },
-    ]).onConflictDoNothing();
-  }
-  console.log("✓ Goals seeded");
 
-  /* Performance reviews — use real employee IDs */
-  if (employees.length >= 1) {
-    await db.insert(performanceReviewsTable).values([
-      { employeeId: employees[0].id, cycle: "annual", period: "2025", overallRating: "4.5", status: "completed", strengths: "Exceptional technical leadership, mentors junior engineers consistently", improvements: "Could improve cross-team documentation and async communication", managerFeedback: "Outstanding contributor — exceeded all engineering targets and delivered critical platform changes on schedule." },
+  const allEmployees = await db.select().from(employeesTable).where(eq(employeesTable.companyId, COMPANY_ID));
+  const empIds = allEmployees.map(e => e.id);
+
+  /* Payroll Runs */
+  console.log("Seeding payroll...");
+  const payrollData = [
+    { name: "January Payroll", start: "2026-01-01", end: "2026-01-31", pay: "2026-01-28", gross: "82450.00", net: "64310.00", tax: "18140.00" },
+    { name: "February Payroll", start: "2026-02-01", end: "2026-02-28", pay: "2026-02-28", gross: "81900.00", net: "63880.00", tax: "18020.00" },
+    { name: "March Payroll", start: "2026-03-01", end: "2026-03-31", pay: "2026-03-28", gross: "83100.00", net: "64800.00", tax: "18300.00" },
+    { name: "April Payroll", start: "2026-04-01", end: "2026-04-30", pay: "2026-04-28", gross: "84200.00", net: "65600.00", tax: "18600.00" },
+  ];
+
+  for (const p of payrollData) {
+    await db.insert(payrollRunsTable).values({
+      companyId: COMPANY_ID,
+      name: p.name,
+      periodStart: p.start,
+      periodEnd: p.end,
+      payDate: p.pay,
+      status: "completed",
+      totalGrossPay: p.gross,
+      totalNetPay: p.net,
+      totalTaxes: p.tax,
+      processedAt: new Date(p.pay),
+    }).onConflictDoNothing();
+  }
+
+  /* Leave Requests */
+  console.log("Seeding leave...");
+  await db.insert(leaveRequestsTable).values([
+    { employeeId: empIds[1], type: "vacation", startDate: "2026-06-01", endDate: "2026-06-05", status: "pending", reason: "Family trip", days: "5" },
+    { employeeId: empIds[2], type: "sick", startDate: "2026-05-10", endDate: "2026-05-11", status: "approved", reason: "Fever", days: "2" },
+    { employeeId: empIds[3], type: "personal", startDate: "2026-06-15", endDate: "2026-06-15", status: "pending", reason: "Personal work", days: "1" },
+  ]).onConflictDoNothing();
+
+  /* Time Entries */
+  console.log("Seeding time tracking...");
+  const todayStr = new Date().toISOString().split('T')[0];
+  for (const id of empIds.slice(0, 5)) {
+    await db.insert(timeEntriesTable).values({
+      employeeId: id,
+      date: todayStr,
+      status: "pending",
+      hoursWorked: "8",
+    }).onConflictDoNothing();
+  }
+
+  /* Expenses */
+  console.log("Seeding expenses...");
+  await db.insert(expenseClaimsTable).values([
+    { employeeId: empIds[1], title: "Client Dinner", amount: "125.50", category: "meals", status: "pending", expenseDate: todayStr },
+    { employeeId: empIds[2], title: "AWS Training", amount: "450.00", category: "training", status: "approved", expenseDate: todayStr },
+  ]).onConflictDoNothing();
+
+  /* Training Courses */
+  console.log("Seeding training...");
+  const courses = await db.insert(coursesTable).values([
+    { companyId: COMPANY_ID, title: "Company Security Policy 2026", category: "security", durationHours: "2.5", isRequired: true, provider: "Internal" },
+    { companyId: COMPANY_ID, title: "Effective Communication", category: "soft_skills", durationHours: "4.0", provider: "LinkedIn Learning" },
+    { companyId: COMPANY_ID, title: "Introduction to React v19", category: "technical", durationHours: "12.0", provider: "Frontend Masters" },
+  ]).onConflictDoNothing().returning();
+
+  if (courses.length > 0) {
+    await db.insert(enrollmentsTable).values([
+      { courseId: courses[0].id, employeeId: empIds[1], status: "completed", progress: 100, score: "95.00" },
+      { courseId: courses[1].id, employeeId: empIds[2], status: "enrolled", progress: 45 },
     ]).onConflictDoNothing();
   }
-  if (employees.length >= 2) {
-    await db.insert(performanceReviewsTable).values([
-      { employeeId: employees[1].id, cycle: "annual", period: "2025", overallRating: "4.2", status: "completed", strengths: "Strong product vision, excellent stakeholder management, clear roadmap communication", improvements: "Data-driven decision making could be strengthened with more A/B testing", managerFeedback: "Consistently delivers high-impact features on schedule. A strong product leader the team respects." },
+
+  /* Assets */
+  console.log("Seeding assets...");
+  await db.insert(assetsTable).values([
+    { companyId: COMPANY_ID, name: "MacBook Pro 14\"", category: "laptop", brand: "Apple", serialNumber: "SN-987654", status: "assigned", assignedTo: empIds[1] },
+    { companyId: COMPANY_ID, name: "Dell UltraSharp 27\"", category: "monitor", brand: "Dell", serialNumber: "SN-112233", status: "assigned", assignedTo: empIds[1] },
+    { companyId: COMPANY_ID, name: "Logitech MX Master 3S", category: "peripherals", brand: "Logitech", status: "available" },
+  ]).onConflictDoNothing();
+
+  /* Onboarding Tasks */
+  console.log("Seeding onboarding...");
+  await db.insert(onboardingTasksTable).values([
+    { employeeId: empIds[1], title: "Sign Employment Contract", category: "documentation", priority: "high", isCompleted: true },
+    { employeeId: empIds[1], title: "Background Verification", category: "documentation", priority: "high", isCompleted: true },
+    { employeeId: empIds[1], title: "IT Hardware Setup", category: "it", priority: "medium", isCompleted: false },
+    { employeeId: empIds[2], title: "Initial HR Briefing", category: "hr", priority: "medium", isCompleted: false },
+  ]).onConflictDoNothing();
+
+  /* Benefit Plans */
+  console.log("Seeding benefits...");
+  const plans = await db.insert(benefitPlansTable).values([
+    { companyId: COMPANY_ID, name: "Premium Health Insurance", type: "medical", provider: "Blue Cross", employeeCost: "150.00", employerCost: "450.00" },
+    { companyId: COMPANY_ID, name: "Vision & Dental Plus", type: "dental", provider: "Aetna", employeeCost: "45.00", employerCost: "90.00" },
+    { companyId: COMPANY_ID, name: "401k Retirement Plan", type: "retirement", provider: "Fidelity", employeeCost: "0.00", employerCost: "0.00" },
+  ]).onConflictDoNothing().returning();
+
+  if (plans.length > 0) {
+    await db.insert(benefitEnrollmentsTable).values([
+      { employeeId: empIds[1], planId: plans[0].id },
+      { employeeId: empIds[1], planId: plans[2].id },
+      { employeeId: empIds[2], planId: plans[1].id },
     ]).onConflictDoNothing();
   }
-  if (employees.length >= 3) {
-    await db.insert(performanceReviewsTable).values([
-      { employeeId: employees[2].id, cycle: "half-yearly", period: "H1 2026", status: "pending" },
-    ]).onConflictDoNothing();
-  }
-  if (employees.length >= 4) {
-    await db.insert(performanceReviewsTable).values([
-      { employeeId: employees[3].id, cycle: "annual", period: "2025", overallRating: "3.8", status: "completed", strengths: "Fast learner, highly reliable delivery, great attitude", improvements: "Leadership skills development needed to move to senior level", managerFeedback: "Good performer with a clear growth trajectory. Ready for stretch assignments." },
-    ]).onConflictDoNothing();
-  }
-  if (employees.length >= 5) {
-    await db.insert(performanceReviewsTable).values([
-      { employeeId: employees[4].id, cycle: "annual", period: "2025", overallRating: "4.0", status: "completed", strengths: "Excellent client relationships, consistently hits quota", improvements: "Internal CRM hygiene and deal documentation", managerFeedback: "Reliable revenue contributor. Consistent top-3 in the sales team." },
-    ]).onConflictDoNothing();
-  }
-  console.log("✓ Performance reviews seeded");
 
   console.log("\n✅ All done! Login: superadmin@hrpay.com / Admin@123");
   process.exit(0);
