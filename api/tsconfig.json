@@ -1,7 +1,10 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "typeRoots": [
+      "../artifacts/api-server/node_modules/@types"
+    ]
   },
   "include": [
     "index.ts",
