@@ -20,28 +20,78 @@ export default function Announcements() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" });
 
-  const announcements = useQuery<Announcement[]>({ queryKey: ["announcements"], queryFn: () => fetch(`${API}/announcements`, { headers: apiHeaders(token) }).then(r => r.json()) });
+  const announcements = useQuery<Announcement[]>({
+    queryKey: ["announcements"],
+    queryFn: async () => {
+      const r = await fetch(`${API}/announcements`, { headers: apiHeaders(token) });
+      if (!r.ok) throw new Error("Failed to fetch announcements");
+      return r.json();
+    }
+  });
 
   const create = useMutation({
-    mutationFn: () => fetch(`${API}/announcements`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(form) }).then(r => r.json()),
-    onSuccess: () => { toast.success("Announcement published successfully"); qc.invalidateQueries({ queryKey: ["announcements"] }); setShowForm(false); setForm({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" }); },
-    onError: () => toast.error("Failed to create announcement", { description: "Please check your input and try again." }),
+    mutationFn: async () => {
+      const r = await fetch(`${API}/announcements`, { method: "POST", headers: apiHeaders(token), body: JSON.stringify(form) });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to create announcement");
+      }
+      return r.json();
+    },
+    onSuccess: () => {
+      toast.success("Announcement published successfully");
+      qc.invalidateQueries({ queryKey: ["announcements"] });
+      setShowForm(false);
+      setForm({ title: "", content: "", type: "info", target: "all", isPinned: false, publishedBy: user?.name ?? "Admin" });
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to create announcement"),
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => fetch(`${API}/announcements/${id}`, { method: "DELETE", headers: apiHeaders(token) }),
-    onSuccess: () => { toast.success("Announcement deleted successfully"); qc.invalidateQueries({ queryKey: ["announcements"] }); },
-    onError: () => toast.error("Failed to delete announcement", { description: "Please try again." }),
+    mutationFn: async (id: number) => {
+      const r = await fetch(`${API}/announcements/${id}`, { method: "DELETE", headers: apiHeaders(token) });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to delete announcement");
+      }
+    },
+    onSuccess: () => {
+      toast.success("Announcement deleted successfully");
+      qc.invalidateQueries({ queryKey: ["announcements"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to delete announcement"),
   });
 
   const pin = useMutation({
-    mutationFn: ({ id, isPinned }: { id: number; isPinned: boolean }) => fetch(`${API}/announcements/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ isPinned }) }).then(r => r.json()),
-    onSuccess: () => { toast.success("Announcement updated successfully"); qc.invalidateQueries({ queryKey: ["announcements"] }); },
-    onError: () => toast.error("Failed to update announcement", { description: "Please try again." }),
+    mutationFn: async ({ id, isPinned }: { id: number; isPinned: boolean }) => {
+      const r = await fetch(`${API}/announcements/${id}`, { method: "PATCH", headers: apiHeaders(token), body: JSON.stringify({ isPinned }) });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to update announcement");
+      }
+      return r.json();
+    },
+    onSuccess: () => {
+      toast.success("Announcement updated successfully");
+      qc.invalidateQueries({ queryKey: ["announcements"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to update announcement"),
   });
 
-  const pinned = (announcements.data ?? []).filter(a => a.isPinned);
-  const regular = (announcements.data ?? []).filter(a => !a.isPinned);
+  // Filter announcements based on target
+  const filteredAnnouncements = (announcements.data ?? []).filter(a => {
+    if (a.target === "all") return true;
+    if (user?.role === "company_admin" || user?.role === "super_admin") return true;
+    
+    // Check if user is in the targeted department/group
+    // Note: This is a simple string match for demonstration. 
+    // In a full implementation, this would match department IDs or names.
+    return a.target.toLowerCase() === user?.role?.toLowerCase();
+  });
+
+  const pinned = filteredAnnouncements.filter(a => a.isPinned);
+  const regular = filteredAnnouncements.filter(a => !a.isPinned);
+
 
   return (
     <div className="space-y-5">

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { announcementsTable } from "@workspace/db";
+import { announcementsTable, employeesTable, departmentsTable } from "@workspace/db";
 import { eq, desc, and, or, isNull } from "drizzle-orm";
 import { requireNonEmployee, getRequestUser } from "../lib/auth-helpers";
 
@@ -8,16 +8,34 @@ const router = Router();
 
 router.get("/announcements", async (req, res) => {
   const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
 
-  const conditions = user?.companyId
-    ? [or(eq(announcementsTable.companyId, user.companyId), isNull(announcementsTable.companyId))]
-    : [isNull(announcementsTable.companyId)];
+  const baseConditions = [
+    or(eq(announcementsTable.companyId, user.companyId!), isNull(announcementsTable.companyId))
+  ];
+
+  // If employee, filter by target (all, or their specific department)
+  if (user.role === "employee" && user.employeeId) {
+    const [employee] = await db
+      .select({ deptName: departmentsTable.name })
+      .from(employeesTable)
+      .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
+      .where(eq(employeesTable.id, user.employeeId));
+
+    const targets = ["all"];
+    if (employee?.deptName) targets.push(employee.deptName.toLowerCase());
+    
+    // Also include role-based targets like "hr", "management" if applicable
+    // For now, just "all" and department name
+    baseConditions.push(or(...targets.map(t => eq(announcementsTable.target, t))));
+  }
 
   const rows = await db
     .select()
     .from(announcementsTable)
-    .where(conditions[0])
-    .orderBy(desc(announcementsTable.createdAt));
+    .where(and(...baseConditions))
+    .orderBy(desc(announcementsTable.isPinned), desc(announcementsTable.createdAt));
+    
   res.json(rows);
 });
 
