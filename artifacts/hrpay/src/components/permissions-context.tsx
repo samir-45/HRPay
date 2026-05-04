@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth, apiHeaders } from "./auth-context";
+import { useSubscription } from "./subscription-context";
 
 export type FeatureKey =
   | "employees" | "payroll" | "time" | "leave" | "recruitment" | "performance"
@@ -56,6 +57,23 @@ export const DEFAULT_POWERS: PowerPermissionsMap = {
   employee:   { manage_employees:false, process_payroll:false, approve_leave:false, approve_time:false, approve_expenses:false, manage_departments:false, manage_benefits:false, manage_recruitment:false, manage_performance:false, manage_training:false, manage_assets:false, publish_announcements:false, view_reports:false, invite_members:false, edit_settings:false, manage_permissions:false },
 };
 
+export const POWER_TO_FEATURE: Record<string, FeatureKey> = {
+  manage_employees: "employees",
+  process_payroll: "payroll",
+  approve_leave: "leave",
+  approve_time: "time",
+  approve_expenses: "expenses",
+  manage_departments: "departments",
+  manage_benefits: "benefits",
+  manage_recruitment: "recruitment",
+  manage_performance: "performance",
+  manage_training: "training",
+  manage_assets: "assets",
+  publish_announcements: "announcements",
+  view_reports: "reports",
+  invite_members: "team",
+};
+
 interface PermissionsContextValue {
   permissions: PermissionsMap;
   powers: PowerPermissionsMap;
@@ -96,21 +114,43 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
 
+  const { planHasFeature } = useSubscription();
   const hasFeature = useCallback((feature: FeatureKey): boolean => {
     if (!user) return false;
-    if (user.role === "company_admin" || user.role === "super_admin") return true;
+
+    // Super admin always has all features
+    if (user.role === "super_admin") return true;
+
+    // Check if the current plan supports this feature
+    if (!planHasFeature(feature)) return false;
+
+    // Company admin has all features supported by the plan
+    if (user.role === "company_admin") return true;
+
+    // Other roles follow role-based permissions, but still restricted by plan
     const role = user.role as RoleKey;
     if (!permissions[role]) return true;
     return permissions[role][feature] ?? true;
-  }, [user, permissions]);
+  }, [user, permissions, planHasFeature]);
 
   const hasPower = useCallback((power: PowerKey): boolean => {
     if (!user) return false;
-    if (user.role === "company_admin" || user.role === "super_admin") return true;
+
+    // Super admin always has all powers
+    if (user.role === "super_admin") return true;
+
+    // If power is linked to a feature, check the plan first
+    const feature = POWER_TO_FEATURE[power];
+    if (feature && !planHasFeature(feature)) return false;
+
+    // Company admin has all powers allowed by the plan
+    if (user.role === "company_admin") return true;
+
+    // Other roles follow role-based power permissions
     const role = user.role as RoleKey;
     if (!powers[role]) return false;
     return powers[role][power] ?? false;
-  }, [user, powers]);
+  }, [user, powers, planHasFeature]);
 
   return (
     <PermissionsContext.Provider value={{ permissions, powers, isLoading, hasFeature, hasPower, refetch: fetchPermissions }}>
