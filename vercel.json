@@ -6,7 +6,7 @@
   "outputDirectory": "artifacts/hrpay/dist/public",
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{artifacts/api-server/src/**,lib/db/src/**,lib/api-zod/src/**,lib/integrations-openai-ai-server/src/**}"
+      "includeFiles": "artifacts/api-server/dist/**"
     }
   },
   "rewrites": [

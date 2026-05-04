@@ -5,7 +5,7 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{src/**,../../lib/db/src/**,../../lib/api-zod/src/**,../../lib/integrations-openai-ai-server/src/**}"
+      "includeFiles": "dist/**"
     }
   },
   "rewrites": [
