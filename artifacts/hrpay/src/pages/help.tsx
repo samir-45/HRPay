@@ -754,7 +754,7 @@ export default function Help() {
             )}
           </div>
         ) : (
-          <div className="p-6 max-w-3xl mx-auto space-y-5">
+          <div className="p-6 space-y-5">
             {/* Section header */}
             <div className="flex items-center gap-3">
               <div className={`flex size-10 items-center justify-center rounded-2xl ${section.color}`}>
