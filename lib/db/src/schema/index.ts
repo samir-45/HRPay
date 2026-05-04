@@ -16,5 +16,6 @@ export * from "./assets";
 export * from "./training";
 export * from "./insights";
 export * from "./shifts";
+export * from "./shiftAssignments";
 export * from "./attendanceDevices";
-export * from "./regularization";
+export * from "./regularizationRequests";

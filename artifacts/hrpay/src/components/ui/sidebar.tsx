@@ -27,7 +27,7 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
+const DEFAULT_SIDEBAR_WIDTH_PX = 256 // 16rem = 256px
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
@@ -40,6 +40,8 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  sidebarWidth: number
+  setSidebarWidth: (width: number) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -88,6 +90,17 @@ function SidebarProvider({
     [setOpenProp, open]
   )
 
+  // Sidebar width state (in px)
+  const [sidebarWidth, setSidebarWidth] = React.useState<number>(() => {
+    const saved = localStorage.getItem('sidebar_width')
+    return saved ? parseInt(saved) : DEFAULT_SIDEBAR_WIDTH_PX
+  })
+
+  // Persist width to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('sidebar_width', String(sidebarWidth))
+  }, [sidebarWidth])
+
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
@@ -122,8 +135,10 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      sidebarWidth,
+      setSidebarWidth,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, sidebarWidth]
   )
 
   return (
@@ -133,7 +148,7 @@ function SidebarProvider({
           data-slot="sidebar-wrapper"
           style={
             {
-              "--sidebar-width": SIDEBAR_WIDTH,
+              "--sidebar-width": `${sidebarWidth}px`,
               "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
               ...style,
             } as React.CSSProperties
@@ -280,24 +295,62 @@ function SidebarTrigger({
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, state, sidebarWidth, setSidebarWidth } = useSidebar()
+  const [isDragging, setIsDragging] = React.useState(false)
+  const [startX, setStartX] = React.useState(0)
+  const [startWidth, setStartWidth] = React.useState(0)
+  const [hasDragged, setHasDragged] = React.useState(false)
+
+  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+    if (state !== "expanded") return
+    e.preventDefault()
+    setIsDragging(true)
+    setHasDragged(false)
+    setStartX(e.clientX)
+    setStartWidth(sidebarWidth)
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [state, sidebarWidth])
+
+  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!isDragging) return
+    const delta = e.clientX - startX
+    if (Math.abs(delta) > 5) setHasDragged(true)
+    const newWidth = Math.max(48, Math.min(480, startWidth + delta))
+    setSidebarWidth(newWidth)
+  }, [isDragging, startX, startWidth, setSidebarWidth])
+
+  const handleMouseUp = React.useCallback(() => {
+    setIsDragging(false)
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    if (!hasDragged) toggleSidebar()
+  }, [hasDragged, toggleSidebar])
+
+  React.useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [handleMouseMove, handleMouseUp])
 
   // Note: Tailwind v3.4 doesn't support "in-" selectors. So the rail won't work perfectly.
   return (
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
+      aria-label="Resize or Toggle Sidebar"
       tabIndex={-1}
-      onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      onMouseDown={handleMouseDown}
+      title={state === "expanded" ? "Drag to resize, click to collapse" : "Click to expand"}
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
-        "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
+        state === "expanded" ? "cursor-col-resize" : "cursor-pointer",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
         "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
         "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
         "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        isDragging && "bg-lime-100/50",
         className
       )}
       {...props}
