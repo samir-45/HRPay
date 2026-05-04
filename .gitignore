@@ -16,6 +16,7 @@ node_modules/
 # Build Outputs
 dist/
 build/
+public/
 *.tsbuildinfo
 
 # IDE/System

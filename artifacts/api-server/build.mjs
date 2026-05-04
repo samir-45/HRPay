@@ -1,14 +1,45 @@
 import { createRequire } from "node:module";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = path.resolve(artifactDir, "..", "..");
+function runPnpm(args) {
+  return new Promise((resolve, reject) => {
+    const command = process.platform === "win32" ? "cmd.exe" : "pnpm";
+    const commandArgs =
+      process.platform === "win32" ? ["/d", "/s", "/c", "pnpm", ...args] : args;
+
+    const child = spawn(command, commandArgs, {
+      cwd: workspaceRoot,
+      stdio: "inherit",
+    });
+
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`pnpm ${args.join(" ")} exited with code ${code}`));
+      }
+    });
+  });
+}
+
+async function copyFrontendToPublic() {
+  const frontendDist = path.join(workspaceRoot, "artifacts", "hrpay", "dist", "public");
+  const publicDir = path.join(workspaceRoot, "public");
+
+  await rm(publicDir, { recursive: true, force: true });
+  await cp(frontendDist, publicDir, { recursive: true });
+}
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
@@ -118,6 +149,11 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  if (process.env["VERCEL"] && !process.env["SKIP_VERCEL_PUBLIC_FALLBACK"]) {
+    await runPnpm(["--filter", "@workspace/hrpay", "run", "build"]);
+    await copyFrontendToPublic();
+  }
 }
 
 buildAll().catch((err) => {
