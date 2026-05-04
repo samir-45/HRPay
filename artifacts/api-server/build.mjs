@@ -35,10 +35,14 @@ function runPnpm(args) {
 
 async function copyFrontendToPublic() {
   const frontendDist = path.join(workspaceRoot, "artifacts", "hrpay", "dist", "public");
-  const publicDir = path.join(workspaceRoot, "public");
+  const publicDirs = [path.join(workspaceRoot, "public"), path.join(artifactDir, "public")];
 
-  await rm(publicDir, { recursive: true, force: true });
-  await cp(frontendDist, publicDir, { recursive: true });
+  await Promise.all(
+    publicDirs.map(async (publicDir) => {
+      await rm(publicDir, { recursive: true, force: true });
+      await cp(frontendDist, publicDir, { recursive: true });
+    }),
+  );
 }
 
 async function buildAll() {

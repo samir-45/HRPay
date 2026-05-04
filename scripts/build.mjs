@@ -29,10 +29,17 @@ function run(args, options = {}) {
 
 async function copyFrontendToPublic() {
   const frontendDist = path.join(rootDir, "artifacts", "hrpay", "dist", "public");
-  const publicDir = path.join(rootDir, "public");
+  const publicDirs = [
+    path.join(rootDir, "public"),
+    path.join(rootDir, "artifacts", "api-server", "public"),
+  ];
 
-  await rm(publicDir, { recursive: true, force: true });
-  await cp(frontendDist, publicDir, { recursive: true });
+  await Promise.all(
+    publicDirs.map(async (publicDir) => {
+      await rm(publicDir, { recursive: true, force: true });
+      await cp(frontendDist, publicDir, { recursive: true });
+    }),
+  );
 }
 
 await run(["run", "typecheck"]);

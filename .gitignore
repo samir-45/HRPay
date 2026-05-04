@@ -17,6 +17,7 @@ node_modules/
 dist/
 build/
 public/
+artifacts/api-server/public/
 *.tsbuildinfo
 
 # IDE/System
